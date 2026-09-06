@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio SQL - Basic Database & File Studio</title>
+  <meta name="description" content="Minimalist, intuitive database and file management studio inspired by SSMS.">
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="app" class="app-container">
+
+    <!-- TOP NAVBAR HEADER -->
+    <header class="top-navbar">
+      <div class="header-brand">
+        <div class="logo-icon"><i class="fa-solid fa-database"></i></div>
+        <span class="brand-title">Studio SQL</span>
+        <span class="brand-badge">Minimal</span>
+      </div>
+
+      <div class="header-db-status">
+        <span class="status-indicator"></span>
+        <span class="db-label">Database:</span>
+        <strong id="headerDbName">MyDatabase.sqlite</strong>
+        <button class="btn-icon-xs" title="Rename Database" onclick="openRenameDbModal()"><i class="fa-solid fa-pen"></i></button>
+        <span class="db-pill" id="headerTableCount">3 Tables</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-sm btn-primary" onclick="openInitialSetupModal()">
+          <i class="fa-solid fa-plus"></i> New DB
+        </button>
+        <button class="btn btn-sm btn-success" onclick="handleSaveDbButtonClick()">
+          <i class="fa-solid fa-floppy-disk"></i> Save DB
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="exportDatabaseFile()">
+          <i class="fa-solid fa-download"></i> Export DB
+        </button>
+        <button class="btn-icon" id="themeToggleBtn" title="Toggle Light/Dark Mode">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN WRAPPER: 2-PANEL LAYOUT (NO RIGHTSIDE CHART/METRICS PANEL) -->
+    <div class="main-body">
+
+      <!-- LEFT EXPLORER SIDEBAR -->
+      <aside class="sidebar-panel">
+        
+        <!-- SECTION 1: TABLES EXPLORER -->
+        <div class="sidebar-section">
+          <div class="section-header">
+            <span class="section-title"><i class="fa-solid fa-table-cells"></i> TABLES</span>
+            <button class="btn-icon-xs" title="Create New Table" onclick="openCreateTableModal()">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+          <div class="tree-list" id="tablesList">
+            <!-- Dynamic Tables List -->
+          </div>
+        </div>
+
+        <!-- SECTION 2: FOLDERS & FILES EXPLORER (WITH DRAG & DROP HOVER ANIMATION) -->
+        <div class="sidebar-section">
+          <div class="section-header">
+            <span class="section-title"><i class="fa-solid fa-folder-tree"></i> FOLDERS & FILES</span>
+            <button class="btn-icon-xs" title="Create New Folder" onclick="openCreateFolderModal()">
+              <i class="fa-solid fa-folder-plus"></i>
+            </button>
+          </div>
+          <div class="dropzone-tip">
+            <i class="fa-solid fa-hand-pointer"></i> Drag any file (MP4, PNG, CSV...) into any folder below
+          </div>
+
+          <div class="folders-tree" id="foldersTree">
+            <!-- Dynamic Folder Drop Targets Rendered Here -->
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- MAIN CONTENT VIEW AREA -->
+      <main class="content-panel">
+
+        <!-- TABS BAR -->
+        <div class="tabs-header">
+          <div class="tab-items-wrapper" id="tabItemsWrapper">
+            <!-- Dynamic Tabs -->
+          </div>
+          <div class="tab-actions">
+            <button class="btn-tab-action" onclick="openQueryTab()" title="Open SQL Console">
+              <i class="fa-solid fa-terminal"></i> SQL Query
+            </button>
+          </div>
+        </div>
+
+        <!-- VIEW CONTAINER -->
+        <div class="view-viewport">
+
+          <!-- VIEW A: TABLE CONTENTS VIEWER & DATA EDITOR -->
+          <section id="view-table-contents" class="view-page active-view">
+            <div class="view-toolbar">
+              <div class="table-info-meta">
+                <h2 id="activeTableName"><i class="fa-solid fa-table"></i> Users</h2>
+                <span class="meta-badge" id="activeTableRowCount">0 rows</span>
+                <span class="meta-badge" id="activeTableColCount">0 cols</span>
+              </div>
+              <div class="toolbar-controls">
+                <div class="search-box">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="tableDataSearchInput" placeholder="Filter rows..." onkeyup="filterTableDataRows(this.value)">
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="openAddRecordModal()">
+                  <i class="fa-solid fa-plus"></i> Add Record
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="openEditSchemaModal()">
+                  <i class="fa-solid fa-pen-to-square"></i> Modify Schema
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteActiveTable()">
+                  <i class="fa-solid fa-trash-can"></i> Delete Table
+                </button>
+              </div>
+            </div>
+
+            <!-- TABLE DATA GRID CONTAINER -->
+            <div class="data-grid-container">
+              <table class="grid-table" id="mainDataTable">
+                <thead>
+                  <tr id="mainDataTableHeader">
+                    <!-- Dynamic Headers -->
+                  </tr>
+                </thead>
+                <tbody id="mainDataTableBody">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+            </div>
+            <div class="table-footer-status">
+              <span id="gridFooterSummary">Showing table data</span>
+              <button class="btn-link" onclick="handleSaveDbButtonClick()"><i class="fa-solid fa-floppy-disk"></i> Save Database Changes</button>
+            </div>
+          </section>
+
+          <!-- VIEW B: FILE & MEDIA PREVIEWER -->
+          <section id="view-file-preview" class="view-page">
+            <div class="preview-header">
+              <div class="file-title-info">
+                <i class="fa-solid fa-file" id="previewFileIcon"></i>
+                <h3 id="previewFileName">File Preview</h3>
+                <span class="file-size-badge" id="previewFileSize">0 KB</span>
+              </div>
+              <button class="btn btn-sm btn-danger" onclick="deleteActivePreviewFile()">
+                <i class="fa-solid fa-trash"></i> Delete File
+              </button>
+            </div>
+            <div class="preview-body" id="previewBodyContainer">
+              <!-- Dynamic Preview Content (Video, Image, CSV table, SQL text) -->
+            </div>
+          </section>
+
+          <!-- VIEW C: SQL QUERY CONSOLE -->
+          <section id="view-sql-query" class="view-page">
+            <div class="query-editor-bar">
+              <button class="btn btn-sm btn-primary" onclick="runConsoleSqlQuery()">
+                <i class="fa-solid fa-play"></i> Run Query
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="clearConsoleQuery()">
+                <i class="fa-solid fa-eraser"></i> Clear
+              </button>
+            </div>
+            <textarea id="consoleQueryInput" class="query-textarea" spellcheck="false" placeholder="SELECT * FROM Users;"></textarea>
+            <div class="query-results-wrapper">
+              <div class="results-header-title">QUERY RESULTS</div>
+              <div class="results-scroll-box" id="consoleQueryResults">
+                <p class="placeholder-text">Run a query to see results.</p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL 1: INITIAL SETUP & DATABASE PROMPT (REQUIRED)     -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop hidden" id="initialSetupModal">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-database"></i></div>
+          <div>
+            <h3>Database Setup Prompt</h3>
+            <p>Enter Database Name and optional necessary files to seed workspace</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <form id="initialSetupForm" onsubmit="handleInitialSetupSubmit(event)">
+          <div class="form-group">
+            <label for="promptDbName">Database Name <span class="required">*</span></label>
+            <input type="text" id="promptDbName" class="form-control" value="MyDatabase" placeholder="e.g. SchoolDB" required>
+            <small class="form-help">Database extension .sqlite will be added automatically.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Initial Necessary Files (Drag & Drop or Choose)</label>
+            <div class="modal-dropzone" id="modalFileDropzone">
+              <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+              <span>Drop initial files here (MP4, PNG, CSV, SQL...)</span>
+              <input type="file" id="modalFileInput" multiple style="display: none;" onchange="handleModalFileSelect(event)">
+              <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="document.getElementById('modalFileInput').click()">Browse Files</button>
+            </div>
+            <div class="staged-files-list" id="modalStagedFilesList"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Starter Tables Scaffolding</label>
+            <div class="checkbox-option">
+              <input type="checkbox" id="scaffoldSampleTables" checked>
+              <label for="scaffoldSampleTables">Create default sample tables (Users, Products, Orders)</label>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-check"></i> Initialize & Launch Database</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL 2: CREATE NEW TABLE                               -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop hidden" id="createTableModal">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-table"></i></div>
+          <div>
+            <h3>Create New Table</h3>
+            <p>Define table name and columns</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('createTableModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="createTableForm" onsubmit="handleCreateTableSubmit(event)">
+          <input type="hidden" id="editingOldTableName" value="">
+          <div class="form-group">
+            <label for="newTableName">Table Name</label>
+            <input type="text" id="newTableName" class="form-control" placeholder="e.g. Employees" required>
+          </div>
+
+          <div class="form-group">
+            <div class="flex-between mb-2">
+              <label>Columns</label>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="addCreateTableColumnRow()">
+                <i class="fa-solid fa-plus"></i> Add Column
+              </button>
+            </div>
+            <table class="columns-input-table">
+              <thead>
+                <tr>
+                  <th>Column Name</th>
+                  <th>Type</th>
+                  <th>Primary Key</th>
+                  <th>Not Null</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="createTableColumnsTbody">
+                <!-- Rows dynamically added -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('createTableModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create Table</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL 3: ADD / EDIT RECORD ROW                          -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop hidden" id="recordModal">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-pen-to-square"></i></div>
+          <div>
+            <h3 id="recordModalTitle">Add New Record</h3>
+            <p id="recordModalSub">Enter field values for table</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('recordModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="recordForm" onsubmit="handleRecordFormSubmit(event)">
+          <div id="recordFieldsContainer">
+            <!-- Dynamic Input Fields per column -->
+          </div>
+          <div class="modal-footer mt-3">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('recordModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Record</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL 4: CREATE NEW FOLDER                              -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop hidden" id="createFolderModal">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-folder-plus"></i></div>
+          <div>
+            <h3>Create New Folder</h3>
+            <p>Organize dropped files</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('createFolderModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="createFolderForm" onsubmit="handleCreateFolderSubmit(event)">
+          <div class="form-group">
+            <label for="newFolderName">Folder Name</label>
+            <input type="text" id="newFolderName" class="form-control" placeholder="e.g. Media, Reports..." required>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('createFolderModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Folder</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL 5: RENAME DATABASE                                -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop hidden" id="renameDbModal">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-pen-to-square"></i></div>
+          <div>
+            <h3>Rename Database</h3>
+            <p>Enter new database name</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('renameDbModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="renameDbForm" onsubmit="handleRenameDbSubmit(event)">
+          <div class="form-group">
+            <label for="renameDbInput">Database Name</label>
+            <input type="text" id="renameDbInput" class="form-control" placeholder="MyDatabase" required>
+            <small class="form-help">Extension .sqlite is preserved automatically.</small>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('renameDbModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Rename Database</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- HIDDEN FILE INPUT FOR EXPLORER UPLOADS -->
+  <input type="file" id="globalFileInput" style="display: none;" multiple onchange="handleGlobalFileSelect(event)">
+
+  <!-- XLSX SPREADSHEET EXPORT ENGINE -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
