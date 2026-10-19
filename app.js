@@ -1,151 +1,203 @@
 /**
- * STUDIO SQL - MINIMALIST DATABASE & FILE MANAGEMENT ENGINE
- * Features: Database Prompt Setup, Basic CRUD (Tables/Rows/Folders/Files),
- * Drag & Drop Files to Any Folder with Glowing Hover Animations, Database Saving & Viewer.
+ * IWM_SQLite - MICROSOFT SQL SERVER MANAGEMENT STUDIO (SSMS) ENGINE
+ * Complete relational database studio:
+ * - Authentic SSMS "Connect to Server" (Windows Auth vs SQL Auth / Laptop / Remote Server)
+ * - SSMS Object Explorer with expandable tree (Databases, Tables, Columns, Keys, Views, Security)
+ * - SSMS Right-Click Context Menu (Select Top 1000, Edit Top 200, Design, Script as, Delete)
+ * - SSMS Table Designer (Column grid, PK toggle, Allow Nulls, Column Properties, guaranteed safe edit)
+ * - SSMS Table Data Editor ("Edit Top 200 Rows" with inline editing, insert & delete)
+ * - SSMS SQL Query Console (Execute / F5, Results Grid & Messages tabs, syntax highlighting)
+ * - SSMS "Delete Objects" confirmation modal with clean foreign key integrity cleanup
+ * - Relational Database Diagrams (interactive table cards and bezier connectors)
+ * - Excel (.xlsx) Export & JSON Backup / Restore
  */
 
-// GLOBAL APPLICATION STATE
-const state = {
-  dbName: 'MyDatabase.sqlite',
-  activeView: 'table-contents', // 'table-contents' | 'file-preview' | 'sql-query'
-  activeTable: 'Users',
-  activeFileId: null,
-  activeFolderId: null,
-  
-  // Open Tabs Management
-  tabs: [
-    { id: 'table:Users', type: 'table', name: 'Users', icon: 'fa-table' }
-  ],
-  activeTabId: 'table:Users',
-
-  // Database Schemas & Records Store
-  tables: {
-    'Users': {
-      columns: [
-        { name: 'id', type: 'INTEGER', pk: true, nn: true },
-        { name: 'name', type: 'TEXT', pk: false, nn: true },
-        { name: 'email', type: 'TEXT', pk: false, nn: true },
-        { name: 'role', type: 'TEXT', pk: false, nn: false },
-        { name: 'created_at', type: 'TEXT', pk: false, nn: false }
-      ],
-      rows: [
-        { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin', created_at: '2026-01-10' },
-        { id: 2, name: 'Maria Garcia', email: 'maria@tech.org', role: 'Developer', created_at: '2026-01-15' },
-        { id: 3, name: 'Alex Chen', email: 'alex@data.io', role: 'Analyst', created_at: '2026-02-01' }
-      ]
-    },
-    'Orders': {
-      columns: [
-        { name: 'id', type: 'INTEGER', pk: true, nn: true },
-        { name: 'user_id', type: 'INTEGER', pk: false, nn: true },
-        { name: 'amount', type: 'REAL', pk: false, nn: true },
-        { name: 'status', type: 'TEXT', pk: false, nn: false }
-      ],
-      rows: [
-        { id: 101, user_id: 1, amount: 149.99, status: 'Completed' },
-        { id: 102, user_id: 2, amount: 299.50, status: 'Pending' }
-      ]
-    },
-    'Products': {
-      columns: [
-        { name: 'id', type: 'INTEGER', pk: true, nn: true },
-        { name: 'title', type: 'TEXT', pk: false, nn: true },
-        { name: 'price', type: 'REAL', pk: false, nn: true },
-        { name: 'stock', type: 'INTEGER', pk: false, nn: false }
-      ],
-      rows: [
-        { id: 501, title: 'Studio SQL Pro', price: 49.00, stock: 100 },
-        { id: 502, title: 'Data Engine Plugin', price: 19.99, stock: 250 }
-      ]
-    }
+// DEFAULT SAMPLE DATABASE SCHEMA TEMPLATE
+const SAMPLE_DATABASE_TABLES = {
+  'Users': {
+    columns: [
+      { name: 'id', type: 'INTEGER', pk: true, nn: true, uq: true, def: '' },
+      { name: 'name', type: 'TEXT', pk: false, nn: true, uq: false, def: '' },
+      { name: 'email', type: 'TEXT', pk: false, nn: true, uq: true, def: '' },
+      { name: 'role', type: 'TEXT', pk: false, nn: false, uq: false, def: 'User' },
+      { name: 'created_at', type: 'TEXT', pk: false, nn: false, uq: false, def: '2026-01-01' }
+    ],
+    foreignKeys: [],
+    rows: [
+      { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin', created_at: '2026-01-10' },
+      { id: 2, name: 'Maria Garcia', email: 'maria@tech.org', role: 'Developer', created_at: '2026-01-15' },
+      { id: 3, name: 'Alex Chen', email: 'alex@data.io', role: 'Analyst', created_at: '2026-02-01' }
+    ]
   },
-
-  // Folders & Files Store
-  folders: {
-    'f_media': {
-      id: 'f_media',
-      name: 'Media',
-      icon: 'fa-folder',
-      files: []
-    },
-    'f_documents': {
-      id: 'f_documents',
-      name: 'Documents',
-      icon: 'fa-folder',
-      files: []
-    },
-    'f_imports': {
-      id: 'f_imports',
-      name: 'Uploads',
-      icon: 'fa-folder',
-      files: []
-    }
+  'Orders': {
+    columns: [
+      { name: 'id', type: 'INTEGER', pk: true, nn: true, uq: true, def: '' },
+      { name: 'user_id', type: 'INTEGER', pk: false, nn: true, uq: false, def: '' },
+      { name: 'amount', type: 'REAL', pk: false, nn: true, uq: false, def: '0.00' },
+      { name: 'status', type: 'TEXT', pk: false, nn: false, uq: false, def: 'Pending' }
+    ],
+    foreignKeys: [
+      { column: 'user_id', refTable: 'Users', refColumn: 'id', onDelete: 'CASCADE' }
+    ],
+    rows: [
+      { id: 101, user_id: 1, amount: 149.99, status: 'Completed' },
+      { id: 102, user_id: 2, amount: 299.50, status: 'Pending' },
+      { id: 103, user_id: 1, amount: 49.00, status: 'Completed' }
+    ]
   },
-
-  // Staged Files for Initial Prompt Setup Modal
-  stagedFiles: [],
-
-  // Record Editing State
-  editingRowIndex: null
+  'Products': {
+    columns: [
+      { name: 'id', type: 'INTEGER', pk: true, nn: true, uq: true, def: '' },
+      { name: 'title', type: 'TEXT', pk: false, nn: true, uq: true, def: '' },
+      { name: 'price', type: 'REAL', pk: false, nn: true, uq: false, def: '0.00' },
+      { name: 'stock', type: 'INTEGER', pk: false, nn: false, uq: false, def: '0' }
+    ],
+    foreignKeys: [],
+    rows: [
+      { id: 501, title: 'Studio SQL Pro', price: 49.00, stock: 100 },
+      { id: 502, title: 'Data Engine Plugin', price: 19.99, stock: 250 },
+      { id: 503, title: 'Cloud Sync Connector', price: 89.00, stock: 45 }
+    ]
+  }
 };
 
-// INITIALIZATION
+// GLOBAL APPLICATION STATE (CLEAN BACKGROUND FIRST PRIOR TO CONNECTION)
+const state = {
+  dbName: 'MyDatabase.sqlite',
+  activeView: 'empty-workspace', // Starts with clear empty background
+  activeTable: null,
+
+  // Connection State (SSMS Server & Authentication)
+  connection: {
+    connected: false, // Disconnected until user connects
+    serverName: 'GABRIEL-PC\\SQLEXPRESS',
+    serverType: 'Database Engine (IWM_SQLite)',
+    authType: 'windows', // 'windows' | 'sql'
+    userName: 'GABRIEL-PC\\Gabriel',
+    networkProtocol: 'TCP/IP',
+    rememberPassword: true
+  },
+
+  // Open Document Tabs (MDI Workspace - clear on launch)
+  tabs: [],
+  activeTabId: null,
+
+  // Relational Tables Store
+  tables: JSON.parse(JSON.stringify(SAMPLE_DATABASE_TABLES)),
+
+  // Active Context Menu Target
+  contextTargetTable: null,
+
+  // Table Designer State
+  designer: {
+    editingTableName: null,
+    isNew: false
+  },
+
+  // Record Editing State
+  editingRowIndex: null,
+
+  // Table Data Grid Sorting & Pagination
+  sort: {
+    column: null,
+    direction: 'asc'
+  },
+  pagination: {
+    pageSize: 200,
+    currentPage: 1
+  },
+
+  // Database Diagrams State
+  diagram: {
+    zoom: 1,
+    tablePositions: {},
+    selectedTable: null,
+    draggingTable: null,
+    dragStart: { x: 0, y: 0 }
+  },
+
+  // Query Counter & History
+  queryCounter: 1,
+  queryHistory: []
+};
+
+// INITIALIZATION (PROMPT CONNECT PANEL FIRST ON LAUNCH OVER CLEAR BACKGROUND)
 document.addEventListener('DOMContentLoaded', () => {
   loadSavedDatabase();
+  loadQueryHistory();
   setupEventListeners();
-  renderSidebar();
+  setupKeyboardShortcuts();
+  updateConnectionUI();
+  populateToolbarDbSelect();
+  renderObjectExplorer();
   renderTabs();
   renderActiveView();
+  setupLineNumbers();
 
-  // Check if first time or prompt setup requested
-  if (!localStorage.getItem('studio_sql_initialized')) {
-    openInitialSetupModal();
-  }
+  // Prompt Connect to Server dialog FIRST on launch
+  openConnectServerModal();
 });
 
-/** Load Saved Database from LocalStorage */
+/** =========================================================================
+ * STORAGE & DATABASE PERSISTENCE
+ * ========================================================================= */
+
 function loadSavedDatabase() {
   try {
     const saved = localStorage.getItem('studio_sql_db');
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed.dbName) state.dbName = parsed.dbName;
-      if (parsed.tables) state.tables = parsed.tables;
-      if (parsed.folders) state.folders = parsed.folders;
+      if (parsed.connection) {
+        state.connection.serverName = parsed.connection.serverName || state.connection.serverName;
+        state.connection.authType = parsed.connection.authType || state.connection.authType;
+        state.connection.userName = parsed.connection.userName || state.connection.userName;
+      }
+      if (parsed.tables && Object.keys(parsed.tables).length > 0) {
+        state.tables = parsed.tables;
+        Object.keys(state.tables).forEach(tName => {
+          const t = state.tables[tName];
+          if (!t.foreignKeys) t.foreignKeys = [];
+          if (!t.rows) t.rows = [];
+          if (t.columns) {
+            t.columns.forEach(c => {
+              if (c.uq === undefined) c.uq = false;
+              if (c.def === undefined) c.def = '';
+            });
+          }
+        });
+      }
+      if (parsed.diagramPositions) state.diagram.tablePositions = parsed.diagramPositions;
     }
   } catch (e) {
     console.error('Failed to load database state from storage:', e);
   }
 }
 
-/** Get Clean Base DB Name without extension */
-function getCleanDbName() {
-  return (state.dbName || 'MyDatabase').replace(/\.sqlite$/i, '').replace(/\.db$/i, '');
-}
-
-/** Save Database State to LocalStorage (Internal quiet save without downloading file) */
 function saveDatabaseToStorage() {
   try {
     const dbPayload = {
       dbName: state.dbName,
+      connection: state.connection,
       tables: state.tables,
-      folders: state.folders
+      diagramPositions: state.diagram.tablePositions
     };
     localStorage.setItem('studio_sql_db', JSON.stringify(dbPayload));
-    localStorage.setItem('studio_sql_initialized', 'true');
   } catch (e) {
     console.error('Error saving state to localStorage:', e);
   }
 }
 
-/** Explicit User Action: Clicked "Save DB" Button in Header */
+function getCleanDbName() {
+  return (state.dbName || 'MyDatabase').replace(/\.sqlite$/i, '').replace(/\.db$/i, '');
+}
+
 function handleSaveDbButtonClick() {
   saveDatabaseToStorage();
   exportDatabaseSpreadsheet();
-  showToast(`Saved DB & generated Excel spreadsheet "${getCleanDbName()}.xlsx"`, 'success');
+  showToast(`Database "${state.dbName}" saved & exported to Excel (.xlsx)`, 'success');
 }
 
-/** Export Database as Excel Spreadsheet file (.xlsx) with matching DB name */
 function exportDatabaseSpreadsheet() {
   const baseName = getCleanDbName();
   const filename = `${baseName}.xlsx`;
@@ -158,744 +210,1016 @@ function exportDatabaseSpreadsheet() {
       const ws = XLSX.utils.json_to_sheet([{ Note: 'Empty Database' }]);
       XLSX.utils.book_append_sheet(wb, ws, 'Database');
     } else {
-      tableKeys.forEach(tableName => {
-        const table = state.tables[tableName];
-        const rows = (table && table.rows && table.rows.length > 0) ? table.rows : [];
-        const ws = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{}]);
-        // Excel worksheet name max length 31 chars
-        const sheetName = tableName.substring(0, 30);
+      tableKeys.forEach(tName => {
+        const table = state.tables[tName];
+        let ws;
+        if (table.rows && table.rows.length > 0) {
+          ws = XLSX.utils.json_to_sheet(table.rows);
+        } else {
+          const emptyRow = {};
+          (table.columns || []).forEach(c => emptyRow[c.name] = '');
+          ws = XLSX.utils.json_to_sheet([emptyRow]);
+        }
+        const sheetName = tName.substring(0, 31);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
       });
     }
-
-    // Save/Download Excel Spreadsheet File
     XLSX.writeFile(wb, filename);
-  } else {
-    // CSV Fallback
-    let csvData = "";
-    Object.keys(state.tables).forEach(tableName => {
-      csvData += `=== TABLE: ${tableName} ===\n`;
-      const table = state.tables[tableName];
-      if (table && table.columns) {
-        csvData += table.columns.map(c => c.name).join(",") + "\n";
-        (table.rows || []).forEach(r => {
-          csvData += table.columns.map(c => JSON.stringify(r[c.name] !== undefined ? r[c.name] : "")).join(",") + "\n";
-        });
-      }
-      csvData += "\n";
-    });
-
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${baseName}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
   }
 }
 
-/** Open Rename Database Modal */
-function openRenameDbModal() {
-  const input = document.getElementById('renameDbInput');
-  if (input) input.value = getCleanDbName();
-  openModal('renameDbModal');
-}
-
-/** Handle Rename Database Form Submit */
-function handleRenameDbSubmit(e) {
-  e.preventDefault();
-  const input = document.getElementById('renameDbInput');
-  let newName = input.value.trim() || 'MyDatabase';
-  if (!newName.endsWith('.sqlite')) newName += '.sqlite';
-
-  state.dbName = newName;
-  document.getElementById('headerDbName').innerText = newName;
-  saveDatabaseToStorage();
-  closeModal('renameDbModal');
-  showToast(`Database renamed to "${newName}"`, 'success');
-}
-
-/** Export Database as JSON file */
 function exportDatabaseFile() {
   const dbPayload = {
     dbName: state.dbName,
     exportedAt: new Date().toISOString(),
+    connection: state.connection,
     tables: state.tables,
-    folders: state.folders
+    diagramPositions: state.diagram.tablePositions
   };
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dbPayload, null, 2));
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", `${state.dbName.replace('.sqlite', '')}_export.json`);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-  showToast(`Exported ${state.dbName}`, 'success');
+  const dl = document.createElement('a');
+  dl.setAttribute("href", dataStr);
+  dl.setAttribute("download", `${getCleanDbName()}_SSMS_Backup.json`);
+  document.body.appendChild(dl);
+  dl.click();
+  dl.remove();
+  showToast(`Exported "${state.dbName}" JSON backup`, 'success');
+  closeAllMenus();
 }
 
-/** Setup Event Listeners & Theme Switcher */
-function setupEventListeners() {
-  // Theme Toggle Button
-  const themeBtn = document.getElementById('themeToggleBtn');
-  if (themeBtn) {
-    themeBtn.addEventListener('click', toggleTheme);
-  }
+/** =========================================================================
+ * SSMS CONNECT TO SERVER (WINDOWS AUTH VS SQL AUTH / LAPTOP / SERVER)
+ * ========================================================================= */
 
-  // Setup Global File Drop listeners to support folder drop targets
-  setupFolderDragAndDropHandlers();
+function openConnectServerModal() {
+  closeAllMenus();
+  const serverInput = document.getElementById('connServerName');
+  if (serverInput) serverInput.value = state.connection.serverName || 'GABRIEL-PC\\SQLEXPRESS';
+
+  const currentAuth = state.connection.authType || 'windows';
+  selectAuthMode(currentAuth);
+
+  const winUser = document.getElementById('connWindowsUser');
+  if (winUser) winUser.value = state.connection.userName || 'GABRIEL-PC\\Gabriel';
+
+  const dbInput = document.getElementById('connDatabaseName');
+  if (dbInput) dbInput.value = state.dbName || 'MyDatabase.sqlite';
+
+  updateConnectionPreview();
+  openModal('connectServerModal');
 }
 
-/** Toggle Theme */
-function toggleTheme() {
-  const body = document.body;
-  const icon = document.querySelector('#themeToggleBtn i');
-  if (body.classList.contains('dark-theme')) {
-    body.classList.remove('dark-theme');
-    body.classList.add('light-theme');
-    icon.className = 'fa-solid fa-sun';
-    showToast('Switched to Light Theme', 'info');
-  } else {
-    body.classList.remove('light-theme');
-    body.classList.add('dark-theme');
-    icon.className = 'fa-solid fa-moon';
-    showToast('Switched to Dark Theme', 'info');
-  }
-}
+function selectAuthMode(mode) {
+  const cardWin = document.getElementById('authCardWindows');
+  const cardSql = document.getElementById('authCardSql');
+  const authInput = document.getElementById('connAuthType');
+  const infoText = document.getElementById('authInfoText');
+  const winUserVal = (document.getElementById('connWindowsUser') ? document.getElementById('connWindowsUser').value : '') || 'GABRIEL-PC\\Gabriel';
 
-/** RENDER SIDEBAR (TABLES & FOLDERS) */
-function renderSidebar() {
-  // Header Info
-  document.getElementById('headerDbName').innerText = state.dbName;
-  const tableKeys = Object.keys(state.tables);
-  document.getElementById('headerTableCount').innerText = `${tableKeys.length} Tables`;
+  if (authInput) authInput.value = mode;
 
-  // Render Tables List
-  const tablesContainer = document.getElementById('tablesList');
-  tablesContainer.innerHTML = '';
-
-  if (tableKeys.length === 0) {
-    tablesContainer.innerHTML = `<div class="placeholder-text p-2">No tables found. Click + to create one.</div>`;
-  } else {
-    tableKeys.forEach(tableName => {
-      const isSelected = state.activeTable === tableName && state.activeView === 'table-contents';
-      const item = document.createElement('div');
-      item.className = `tree-item ${isSelected ? 'active' : ''}`;
-      item.onclick = () => openTableTab(tableName);
-      item.innerHTML = `
-        <div class="tree-item-name">
-          <i class="fa-solid fa-table"></i>
-          <span>${tableName}</span>
-        </div>
-        <div class="tree-item-actions">
-          <button class="btn-icon-xs" title="Modify Table" onclick="event.stopPropagation(); openEditSchemaModal('${tableName}')"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn-icon-xs text-danger" title="Delete Table" onclick="event.stopPropagation(); deleteTableByName('${tableName}')"><i class="fa-solid fa-trash-can"></i></button>
-        </div>
-      `;
-      tablesContainer.appendChild(item);
-    });
-  }
-
-  // Render Folders & Files Tree (WITH DRAG AND DROP TARGET BINDINGS)
-  const foldersContainer = document.getElementById('foldersTree');
-  foldersContainer.innerHTML = '';
-
-  const folderIds = Object.keys(state.folders);
-  if (folderIds.length === 0) {
-    foldersContainer.innerHTML = `<div class="placeholder-text p-2">No folders found. Click + to create.</div>`;
-  } else {
-    folderIds.forEach(fId => {
-      const folder = state.folders[fId];
-      const folderBox = document.createElement('div');
-      folderBox.className = 'folder-box';
-      folderBox.setAttribute('data-folder-id', fId);
-
-      // Render Folder Header & Files List
-      let filesHtml = '';
-      if (folder.files && folder.files.length > 0) {
-        folder.files.forEach(file => {
-          const isFileActive = state.activeFileId === file.id && state.activeView === 'file-preview';
-          let iconClass = 'fa-file';
-          if (file.type.startsWith('image/')) iconClass = 'fa-file-image';
-          else if (file.type.startsWith('video/')) iconClass = 'fa-file-video';
-          else if (file.name.endsWith('.csv')) iconClass = 'fa-file-csv';
-          else if (file.name.endsWith('.sql')) iconClass = 'fa-file-code';
-
-          filesHtml += `
-            <div class="file-item ${isFileActive ? 'active' : ''}" onclick="openFilePreview('${fId}', '${file.id}')">
-              <div class="file-name">
-                <i class="fa-solid ${iconClass}"></i>
-                <span>${file.name}</span>
-              </div>
-              <button class="btn-icon-xs text-danger" title="Delete File" onclick="event.stopPropagation(); deleteFile('${fId}', '${file.id}')"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-          `;
-        });
-      } else {
-        filesHtml = `<div class="placeholder-text" style="font-size: 10px; padding: 4px;">Drag & drop files here</div>`;
-      }
-
-      folderBox.innerHTML = `
-        <div class="folder-header" onclick="triggerFolderUpload('${fId}')">
-          <div class="folder-title">
-            <i class="fa-solid fa-folder text-warning"></i>
-            <span>${folder.name}</span>
-          </div>
-          <span class="folder-count">${folder.files ? folder.files.length : 0}</span>
-        </div>
-        <div class="file-list">
-          ${filesHtml}
-        </div>
-      `;
-
-      // BIND DRAG & DROP EVENTS FOR ANIMATIONS ON THIS FOLDER
-      attachFolderDropListeners(folderBox, fId);
-
-      foldersContainer.appendChild(folderBox);
-    });
-  }
-}
-
-/** BIND DRAG & DROP HOVER ANIMATIONS TO FOLDER BOXES */
-function attachFolderDropListeners(element, folderId) {
-  // Drag Enter
-  element.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    element.classList.add('drag-over');
-  });
-
-  // Drag Over
-  element.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    element.classList.add('drag-over');
-  });
-
-  // Drag Leave
-  element.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    element.classList.remove('drag-over');
-  });
-
-  // Drop
-  element.addEventListener('drop', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    element.classList.remove('drag-over');
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      processFilesForFolder(folderId, files);
+  if (mode === 'windows') {
+    if (cardWin) {
+      cardWin.classList.add('active');
+      const radio = cardWin.querySelector('.auth-card-radio');
+      if (radio) radio.innerHTML = '<i class="fa-solid fa-circle-dot"></i>';
     }
-  });
-}
-
-/** Global dragover setup */
-function setupFolderDragAndDropHandlers() {
-  window.addEventListener('dragover', (e) => e.preventDefault());
-  window.addEventListener('drop', (e) => e.preventDefault());
-}
-
-/** Trigger upload for a specific folder */
-function triggerFolderUpload(folderId) {
-  state.activeFolderId = folderId;
-  const input = document.getElementById('globalFileInput');
-  if (input) input.click();
-}
-
-/** Handle File Selection from Hidden File Input */
-function handleGlobalFileSelect(e) {
-  const files = e.target.files;
-  const targetFolderId = state.activeFolderId || Object.keys(state.folders)[0];
-  if (files && files.length > 0 && targetFolderId) {
-    processFilesForFolder(targetFolderId, files);
-  }
-}
-
-/** Process Uploaded/Dropped Files and save into Target Folder */
-function processFilesForFolder(folderId, fileList) {
-  const folder = state.folders[folderId];
-  if (!folder) return;
-
-  let addedCount = 0;
-  Array.from(fileList).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const fileRecord = {
-        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        name: file.name,
-        size: formatBytes(file.size),
-        type: file.type || 'file',
-        content: event.target.result // DataURL or text
-      };
-      if (!folder.files) folder.files = [];
-      folder.files.push(fileRecord);
-      addedCount++;
-
-      renderSidebar();
-      saveDatabaseToStorage();
-
-      // Automatically open preview for the last added file
-      openFilePreview(folderId, fileRecord.id);
-    };
-
-    // Read as DataURL for media images/videos or text for code
-    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
-      reader.readAsDataURL(file);
-    } else {
-      reader.readAsText(file);
+    if (cardSql) {
+      cardSql.classList.remove('active');
+      const radio = cardSql.querySelector('.auth-card-radio');
+      if (radio) radio.innerHTML = '<i class="fa-regular fa-circle"></i>';
     }
-  });
-
-  showToast(`Uploaded files into "${folder.name}"`, 'success');
-}
-
-/** Format Bytes Utility */
-function formatBytes(bytes) {
-  if (!bytes) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-/** TAB MANAGEMENT SYSTEM */
-function openTableTab(tableName) {
-  if (!state.tables[tableName]) return;
-  state.activeTable = tableName;
-  state.activeView = 'table-contents';
-
-  const tabId = `table:${tableName}`;
-  if (!state.tabs.find(t => t.id === tabId)) {
-    state.tabs.push({ id: tabId, type: 'table', name: tableName, icon: 'fa-table' });
+    if (infoText) {
+      infoText.innerHTML = `Windows Authentication connects directly using your workstation credentials (<strong>${escapeHtml(winUserVal)}</strong>). No password required. Ideal for local development on your PC or laptop.`;
+    }
+    handleAuthTypeChange('windows');
+  } else {
+    if (cardSql) {
+      cardSql.classList.add('active');
+      const radio = cardSql.querySelector('.auth-card-radio');
+      if (radio) radio.innerHTML = '<i class="fa-solid fa-circle-dot"></i>';
+    }
+    if (cardWin) {
+      cardWin.classList.remove('active');
+      const radio = cardWin.querySelector('.auth-card-radio');
+      if (radio) radio.innerHTML = '<i class="fa-regular fa-circle"></i>';
+    }
+    if (infoText) {
+      infoText.innerHTML = `Server Authentication connects using database credentials. Enter the remote or local SQL instance host, Admin Login (e.g. <code>sa</code>), and password. Ideal for connecting to another laptop or remote server.`;
+    }
+    handleAuthTypeChange('sql');
   }
-  state.activeTabId = tabId;
-
-  renderTabs();
-  renderActiveView();
+  updateConnectionPreview();
 }
 
-function openFilePreview(folderId, fileId) {
-  const folder = state.folders[folderId];
-  if (!folder || !folder.files) return;
-  const file = folder.files.find(f => f.id === fileId);
-  if (!file) return;
+function openConnectServerModalWithAuth(mode) {
+  openConnectServerModal();
+  selectAuthMode(mode);
+}
 
-  state.activeFolderId = folderId;
-  state.activeFileId = fileId;
-  state.activeView = 'file-preview';
+function applyServerPreset(val) {
+  const input = document.getElementById('connServerName');
+  if (input) input.value = val;
+  const select = document.getElementById('connServerPreset');
+  if (select) select.value = val;
+  updateConnectionPreview();
+}
 
-  const tabId = `file:${fileId}`;
-  if (!state.tabs.find(t => t.id === tabId)) {
-    let icon = 'fa-file';
-    if (file.type.startsWith('image/')) icon = 'fa-file-image';
-    else if (file.type.startsWith('video/')) icon = 'fa-file-video';
-    state.tabs.push({ id: tabId, type: 'file', folderId, fileId, name: file.name, icon });
+function updateConnectionPreview() {
+  const previewEl = document.getElementById('connLivePreviewText');
+  if (!previewEl) return;
+
+  const server = (document.getElementById('connServerName') ? document.getElementById('connServerName').value.trim() : '') || 'GABRIEL-PC\\SQLEXPRESS';
+  const auth = (document.getElementById('connAuthType') ? document.getElementById('connAuthType').value : '') || 'windows';
+  const db = (document.getElementById('connDatabaseName') ? document.getElementById('connDatabaseName').value.trim() : '') || 'MyDatabase.sqlite';
+  const login = (document.getElementById('connSqlLogin') ? document.getElementById('connSqlLogin').value.trim() : '') || 'sa';
+
+  const authLabel = auth === 'windows' ? 'Windows Auth' : `Server Auth (${login})`;
+  previewEl.innerText = `Target: ${server} • ${authLabel} • ${db}`;
+}
+
+function togglePasswordVisibility() {
+  const pwdInput = document.getElementById('connSqlPassword');
+  const icon = document.getElementById('pwdToggleIcon');
+  if (!pwdInput) return;
+
+  if (pwdInput.type === 'password') {
+    pwdInput.type = 'text';
+    if (icon) icon.className = 'fa-solid fa-eye-slash';
+  } else {
+    pwdInput.type = 'password';
+    if (icon) icon.className = 'fa-solid fa-eye';
   }
-  state.activeTabId = tabId;
-
-  renderTabs();
-  renderActiveView();
 }
 
-function openQueryTab() {
-  state.activeView = 'sql-query';
-  const tabId = 'sql-console';
-  if (!state.tabs.find(t => t.id === tabId)) {
-    state.tabs.push({ id: tabId, type: 'query', name: 'SQL Query Console', icon: 'fa-terminal' });
+function handleAuthTypeChange(authType) {
+  const rowWin = document.getElementById('rowWindowsUser');
+  const rowLogin = document.getElementById('rowSqlLogin');
+  const rowPwd = document.getElementById('rowSqlPassword');
+
+  if (authType === 'windows') {
+    if (rowWin) rowWin.classList.remove('hidden');
+    if (rowLogin) rowLogin.classList.add('hidden');
+    if (rowPwd) rowPwd.classList.add('hidden');
+  } else {
+    if (rowWin) rowWin.classList.add('hidden');
+    if (rowLogin) rowLogin.classList.remove('hidden');
+    if (rowPwd) rowPwd.classList.remove('hidden');
   }
-  state.activeTabId = tabId;
-  renderTabs();
-  renderActiveView();
 }
 
-function closeTab(e, tabId) {
-  e.stopPropagation();
-  state.tabs = state.tabs.filter(t => t.id !== tabId);
-  if (state.activeTabId === tabId) {
-    if (state.tabs.length > 0) {
-      const nextTab = state.tabs[state.tabs.length - 1];
-      state.activeTabId = nextTab.id;
-      if (nextTab.type === 'table') {
-        state.activeTable = nextTab.name;
-        state.activeView = 'table-contents';
-      } else if (nextTab.type === 'file') {
-        state.activeFolderId = nextTab.folderId;
-        state.activeFileId = nextTab.fileId;
-        state.activeView = 'file-preview';
-      } else {
-        state.activeView = 'sql-query';
-      }
-    } else {
-      openQueryTab();
+function toggleConnectOptions() {
+  const panel = document.getElementById('connOptionsPanel');
+  const arrow = document.getElementById('connOptionsArrow');
+  if (panel) {
+    const isHidden = panel.classList.toggle('hidden');
+    if (arrow) {
+      arrow.className = isHidden ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-down';
     }
   }
-  renderTabs();
-  renderActiveView();
 }
 
-/** Render Tab Bar */
-function renderTabs() {
-  const container = document.getElementById('tabItemsWrapper');
-  container.innerHTML = '';
-
-  state.tabs.forEach(tab => {
-    const isActive = tab.id === state.activeTabId;
-    const tabEl = document.createElement('div');
-    tabEl.className = `tab-item ${isActive ? 'active' : ''}`;
-    tabEl.onclick = () => {
-      state.activeTabId = tab.id;
-      if (tab.type === 'table') {
-        state.activeTable = tab.name;
-        state.activeView = 'table-contents';
-      } else if (tab.type === 'file') {
-        state.activeFolderId = tab.folderId;
-        state.activeFileId = tab.fileId;
-        state.activeView = 'file-preview';
-      } else {
-        state.activeView = 'sql-query';
-      }
-      renderTabs();
-      renderActiveView();
-    };
-
-    tabEl.innerHTML = `
-      <i class="fa-solid ${tab.icon}"></i>
-      <span>${tab.name}</span>
-      <button class="tab-close" onclick="closeTab(event, '${tab.id}')"><i class="fa-solid fa-xmark"></i></button>
-    `;
-    container.appendChild(tabEl);
-  });
-}
-
-/** RENDER MAIN ACTIVE VIEW */
-function renderActiveView() {
-  // Hide all view pages
-  document.querySelectorAll('.view-page').forEach(v => v.classList.remove('active-view'));
-
-  if (state.activeView === 'table-contents') {
-    const view = document.getElementById('view-table-contents');
-    if (view) view.classList.add('active-view');
-    renderTableContents();
-  } else if (state.activeView === 'file-preview') {
-    const view = document.getElementById('view-file-preview');
-    if (view) view.classList.add('active-view');
-    renderFilePreview();
-  } else if (state.activeView === 'sql-query') {
-    const view = document.getElementById('view-sql-query');
-    if (view) view.classList.add('active-view');
-  }
-}
-
-/** RENDER TABLE CONTENTS DATA GRID */
-function renderTableContents() {
-  const tableName = state.activeTable;
-  const tableData = state.tables[tableName];
-
-  document.getElementById('activeTableName').innerHTML = `<i class="fa-solid fa-table text-accent"></i> ${tableName}`;
-  if (!tableData) {
-    document.getElementById('mainDataTableHeader').innerHTML = '';
-    document.getElementById('mainDataTableBody').innerHTML = `<tr><td colspan="10" class="placeholder-text p-4">Table "${tableName}" not found.</td></tr>`;
-    return;
-  }
-
-  const columns = tableData.columns || [];
-  const rows = tableData.rows || [];
-
-  document.getElementById('activeTableRowCount').innerText = `${rows.length} rows`;
-  document.getElementById('activeTableColCount').innerText = `${columns.length} columns`;
-  document.getElementById('gridFooterSummary').innerText = `Showing ${rows.length} records in table "${tableName}"`;
-
-  // Render Table Header
-  const headerTr = document.getElementById('mainDataTableHeader');
-  headerTr.innerHTML = '<th>#</th>';
-  columns.forEach(col => {
-    headerTr.innerHTML += `<th>${col.name} <small class="text-muted">(${col.type})</small> ${col.pk ? '<span class="text-warning">PK</span>' : ''}</th>`;
-  });
-  headerTr.innerHTML += `<th style="width: 80px;">Actions</th>`;
-
-  // Render Table Body
-  renderTableRows(rows, columns);
-}
-
-/** Filter Table Rows based on Search Input */
-function filterTableDataRows(query) {
-  const tableName = state.activeTable;
-  const tableData = state.tables[tableName];
-  if (!tableData) return;
-
-  const q = query.toLowerCase().trim();
-  const filtered = tableData.rows.filter(row => {
-    return Object.values(row).some(val => String(val).toLowerCase().includes(q));
-  });
-
-  renderTableRows(filtered, tableData.columns);
-}
-
-/** Render Table Row Elements */
-function renderTableRows(rows, columns) {
-  const body = document.getElementById('mainDataTableBody');
-  body.innerHTML = '';
-
-  if (rows.length === 0) {
-    body.innerHTML = `<tr><td colspan="${columns.length + 2}" class="placeholder-text text-center p-4">No records found. Click "+ Add Record" to insert data.</td></tr>`;
-    return;
-  }
-
-  rows.forEach((row, index) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${index + 1}</strong></td>`;
-
-    columns.forEach(col => {
-      const val = row[col.name] !== undefined ? row[col.name] : '';
-      tr.innerHTML += `<td>${val}</td>`;
-    });
-
-    tr.innerHTML += `
-      <td>
-        <div class="cell-actions">
-          <button class="btn-icon-xs" title="Edit Record" onclick="openEditRecordModal(${index})"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn-icon-xs text-danger" title="Delete Record" onclick="deleteRecordRow(${index})"><i class="fa-solid fa-trash-can"></i></button>
-        </div>
-      </td>
-    `;
-    body.appendChild(tr);
-  });
-}
-
-/** RENDER FILE PREVIEWER (VIDEO, IMAGE, CSV, CODE) */
-function renderFilePreview() {
-  const folder = state.folders[state.activeFolderId];
-  if (!folder || !folder.files) return;
-  const file = folder.files.find(f => f.id === state.activeFileId);
-  if (!file) return;
-
-  document.getElementById('previewFileName').innerText = file.name;
-  document.getElementById('previewFileSize').innerText = file.size;
-
-  const container = document.getElementById('previewBodyContainer');
-  container.innerHTML = '';
-
-  if (file.type.startsWith('image/')) {
-    container.innerHTML = `<img src="${file.content}" class="media-preview-img" alt="${file.name}">`;
-  } else if (file.type.startsWith('video/')) {
-    container.innerHTML = `
-      <video controls class="media-preview-video">
-        <source src="${file.content}" type="${file.type}">
-        Your browser does not support the video tag.
-      </video>
-    `;
-  } else if (file.name.endsWith('.csv')) {
-    // Render CSV Content as Interactive Table
-    const lines = (file.content || '').split('\n').filter(l => l.trim());
-    if (lines.length > 0) {
-      let tableHtml = '<table class="grid-table"><thead><tr>';
-      const headers = lines[0].split(',');
-      headers.forEach(h => tableHtml += `<th>${h.trim()}</th>`);
-      tableHtml += '</tr></thead><tbody>';
-
-      for (let i = 1; i < lines.length; i++) {
-        tableHtml += '<tr>';
-        const cols = lines[i].split(',');
-        cols.forEach(c => tableHtml += `<td>${c.trim()}</td>`);
-        tableHtml += '</tr>';
-      }
-      tableHtml += 'tbody></table>';
-      container.innerHTML = `<div class="data-grid-container" style="width: 100%; max-height: 80vh;">${tableHtml}</div>`;
-    } else {
-      container.innerHTML = `<div class="placeholder-text">CSV file is empty.</div>`;
-    }
-  } else {
-    // Plain Text or Code
-    container.innerHTML = `<pre class="code-preview-box"><code>${escapeHtml(file.content)}</code></pre>`;
-  }
-}
-
-/** Escape HTML Utility */
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/** Delete Active Preview File */
-function deleteActivePreviewFile() {
-  if (state.activeFolderId && state.activeFileId) {
-    deleteFile(state.activeFolderId, state.activeFileId);
-  }
-}
-
-function deleteFile(folderId, fileId) {
-  const folder = state.folders[folderId];
-  if (!folder || !folder.files) return;
-  
-  if (confirm('Are you sure you want to delete this file?')) {
-    folder.files = folder.files.filter(f => f.id !== fileId);
-    closeTab(new Event('click'), `file:${fileId}`);
-    renderSidebar();
-    saveDatabaseToStorage();
-    showToast('File deleted', 'info');
-  }
-}
-
-/** MODAL MANAGEMENT FUNCTIONS */
-function openModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.remove('hidden');
-}
-
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.add('hidden');
-}
-
-/** INITIAL PROMPT SETUP MODAL */
-function openInitialSetupModal() {
-  state.stagedFiles = [];
-  renderStagedFilesList();
-  openModal('initialSetupModal');
-}
-
-function handleModalFileSelect(e) {
-  const files = e.target.files;
-  if (files && files.length > 0) {
-    Array.from(files).forEach(f => state.stagedFiles.push(f));
-    renderStagedFilesList();
-  }
-}
-
-function renderStagedFilesList() {
-  const container = document.getElementById('modalStagedFilesList');
-  container.innerHTML = '';
-  state.stagedFiles.forEach((file, index) => {
-    const div = document.createElement('div');
-    div.className = 'staged-file-item';
-    div.innerHTML = `
-      <span><i class="fa-solid fa-file text-accent"></i> ${file.name} (${formatBytes(file.size)})</span>
-      <button class="btn-icon-xs text-danger" onclick="state.stagedFiles.splice(${index}, 1); renderStagedFilesList();"><i class="fa-solid fa-xmark"></i></button>
-    `;
-    container.appendChild(div);
-  });
-}
-
-function handleInitialSetupSubmit(e) {
+function handleConnectServerSubmit(e) {
   e.preventDefault();
-  const nameInput = document.getElementById('promptDbName');
-  let name = nameInput.value.trim() || 'MyDatabase';
-  if (!name.endsWith('.sqlite')) name += '.sqlite';
+  const serverName = document.getElementById('connServerName').value.trim() || 'GABRIEL-PC\\SQLEXPRESS';
+  const authType = document.getElementById('connAuthType').value;
+  const dbNameInput = document.getElementById('connDatabaseName').value.trim();
 
-  state.dbName = name;
-
-  // Process staged files into Uploads folder
-  if (state.stagedFiles.length > 0) {
-    processFilesForFolder('f_imports', state.stagedFiles);
+  let userName = '';
+  if (authType === 'windows') {
+    userName = document.getElementById('connWindowsUser').value.trim() || 'GABRIEL-PC\\Gabriel';
+  } else {
+    userName = document.getElementById('connSqlLogin').value.trim() || 'sa';
   }
 
-  // Create default sample tables if requested
-  const scaffold = document.getElementById('scaffoldSampleTables').checked;
-  if (!scaffold) {
+  // Schema seed choice
+  const seedOption = document.querySelector('input[name="connSchemaSeed"]:checked');
+  if (seedOption && seedOption.value === 'blank') {
     state.tables = {};
     state.activeTable = null;
-  } else {
+    state.diagram.tablePositions = {};
+  } else if (!state.tables || Object.keys(state.tables).length === 0) {
+    state.tables = JSON.parse(JSON.stringify(SAMPLE_DATABASE_TABLES));
     state.activeTable = 'Users';
   }
 
+  state.connection.connected = true;
+  state.connection.serverName = serverName;
+  state.connection.authType = authType;
+  state.connection.userName = userName;
+
+  if (dbNameInput) {
+    let cleanDb = dbNameInput;
+    if (!cleanDb.endsWith('.sqlite')) cleanDb += '.sqlite';
+    state.dbName = cleanDb;
+  }
+
   saveDatabaseToStorage();
-  closeModal('initialSetupModal');
-  renderSidebar();
+  updateConnectionUI();
+  populateToolbarDbSelect();
+  renderObjectExplorer();
+  closeModal('connectServerModal');
+
+  // Open appropriate initial workspace tab
+  if (state.tabs.length === 0) {
+    if (state.tables && Object.keys(state.tables).length > 0) {
+      const firstTable = Object.keys(state.tables)[0];
+      openTableDataTab(firstTable);
+    } else {
+      openNewQueryTab();
+    }
+  } else {
+    renderTabs();
+    renderActiveView();
+  }
+
+  showToast(`Connected to server "${serverName}" via ${authType === 'windows' ? 'Windows' : 'Server'} Authentication`, 'success');
+}
+
+function disconnectServer() {
+  closeAllMenus();
+  state.connection.connected = false;
+  state.tabs = [];
+  state.activeTabId = null;
+  state.activeView = 'empty-workspace';
+
+  updateConnectionUI();
+  renderObjectExplorer();
   renderTabs();
   renderActiveView();
-  showToast(`Database "${state.dbName}" initialized!`, 'success');
+
+  showToast(`Disconnected from "${state.connection.serverName}". Workspace cleared.`, 'info');
 }
 
-/** CREATE NEW TABLE MODAL */
-function openCreateTableModal() {
-  const oldInput = document.getElementById('editingOldTableName');
-  if (oldInput) oldInput.value = '';
+function updateConnectionUI() {
+  const tag = document.getElementById('titlebarConnectionTag');
+  const sbServer = document.getElementById('sbServerName');
+  const sbAuth = document.getElementById('sbAuthUser');
+  const sbDb = document.getElementById('sbDbName');
 
-  document.getElementById('newTableName').value = '';
-  const tbody = document.getElementById('createTableColumnsTbody');
-  tbody.innerHTML = '';
-  
-  // Default first column: id INTEGER PK
-  addCreateTableColumnRow('id', 'INTEGER', true, true);
-  addCreateTableColumnRow('name', 'TEXT', false, true);
+  const sName = state.connection.serverName || 'GABRIEL-PC\\SQLEXPRESS';
+  const uName = state.connection.userName || 'GABRIEL-PC\\Gabriel';
+  const isConn = state.connection.connected;
 
-  openModal('createTableModal');
+  if (tag) {
+    tag.innerText = isConn ? `${sName} (Connected)` : `${sName} (Disconnected)`;
+    tag.style.color = isConn ? 'var(--color-success)' : 'var(--color-danger)';
+  }
+  if (sbServer) sbServer.innerText = sName;
+  if (sbAuth) sbAuth.innerText = `${uName} (${state.connection.authType === 'windows' ? 'Windows Auth' : 'SQL Auth'})`;
+  if (sbDb) sbDb.innerText = state.dbName;
 }
 
-function addCreateTableColumnRow(name = '', type = 'TEXT', pk = false, nn = false, oldName = '') {
-  const tbody = document.getElementById('createTableColumnsTbody');
+/** =========================================================================
+ * SSMS OBJECT EXPLORER (DOCK PANEL TREE)
+ * ========================================================================= */
+
+function renderObjectExplorer() {
+  const container = document.getElementById('objectExplorerTree');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const isConnected = state.connection.connected;
+  const serverName = state.connection.serverName || 'GABRIEL-PC\\SQLEXPRESS';
+  const userName = state.connection.userName || 'GABRIEL-PC\\Gabriel';
+
+  // Server Root Node
+  const rootNode = document.createElement('div');
+  rootNode.className = 'tree-item-group';
+
+  const rootHeader = document.createElement('div');
+  rootHeader.className = `tree-node ${isConnected ? '' : 'text-muted'}`;
+  rootHeader.innerHTML = `
+    <span class="tree-expander expanded" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+    <span class="tree-icon"><i class="fa-solid fa-server ${isConnected ? 'text-accent' : 'text-danger'}"></i></span>
+    <span class="tree-label"><strong>${serverName}</strong> (SQL Server 16.0 - ${userName})</span>
+  `;
+  rootNode.appendChild(rootHeader);
+
+  const rootChildren = document.createElement('div');
+  rootChildren.className = 'tree-children open';
+
+  if (!isConnected) {
+    rootChildren.innerHTML = `
+      <div class="tree-node text-muted" onclick="openConnectServerModal()">
+        <span class="tree-icon"><i class="fa-solid fa-plug text-danger"></i></span>
+        <span class="tree-label"><em>Disconnected. Click here to connect to server...</em></span>
+      </div>
+    `;
+    rootNode.appendChild(rootChildren);
+    container.appendChild(rootNode);
+    return;
+  }
+
+  // DATABASES FOLDER
+  const dbFolderNode = document.createElement('div');
+  dbFolderNode.className = 'tree-item-group';
+  dbFolderNode.innerHTML = `
+    <div class="tree-node">
+      <span class="tree-expander expanded" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+      <span class="tree-icon"><i class="fa-solid fa-folder text-gold"></i></span>
+      <span class="tree-label">Databases</span>
+    </div>
+  `;
+
+  const dbFolderChildren = document.createElement('div');
+  dbFolderChildren.className = 'tree-children open';
+
+  // System Databases
+  const sysDbNode = document.createElement('div');
+  sysDbNode.className = 'tree-item-group';
+  sysDbNode.innerHTML = `
+    <div class="tree-node text-muted">
+      <span class="tree-expander" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+      <span class="tree-icon"><i class="fa-solid fa-folder"></i></span>
+      <span class="tree-label">System Databases</span>
+    </div>
+    <div class="tree-children">
+      <div class="tree-node text-muted"><span class="tree-icon"><i class="fa-solid fa-database"></i></span><span class="tree-label">master</span></div>
+      <div class="tree-node text-muted"><span class="tree-icon"><i class="fa-solid fa-database"></i></span><span class="tree-label">model</span></div>
+      <div class="tree-node text-muted"><span class="tree-icon"><i class="fa-solid fa-database"></i></span><span class="tree-label">msdb</span></div>
+      <div class="tree-node text-muted"><span class="tree-icon"><i class="fa-solid fa-database"></i></span><span class="tree-label">tempdb</span></div>
+    </div>
+  `;
+  dbFolderChildren.appendChild(sysDbNode);
+
+  // Active User Database
+  const activeDbNode = document.createElement('div');
+  activeDbNode.className = 'tree-item-group';
+
+  const activeDbHeader = document.createElement('div');
+  activeDbHeader.className = 'tree-node active';
+  activeDbHeader.innerHTML = `
+    <span class="tree-expander expanded" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+    <span class="tree-icon"><i class="fa-solid fa-database text-accent"></i></span>
+    <span class="tree-label"><strong>${state.dbName}</strong></span>
+  `;
+  activeDbNode.appendChild(activeDbHeader);
+
+  const activeDbChildren = document.createElement('div');
+  activeDbChildren.className = 'tree-children open';
+
+  // Database Diagrams Node
+  const diagNode = document.createElement('div');
+  diagNode.className = 'tree-node';
+  diagNode.onclick = () => openErDiagramTab();
+  diagNode.innerHTML = `
+    <span class="tree-expander"><i class="fa-solid fa-caret-right" style="opacity:0;"></i></span>
+    <span class="tree-icon"><i class="fa-solid fa-diagram-project text-info"></i></span>
+    <span class="tree-label">Database Diagrams</span>
+  `;
+  activeDbChildren.appendChild(diagNode);
+
+  // Tables Folder
+  const tablesNode = document.createElement('div');
+  tablesNode.className = 'tree-item-group';
+
+  const tableKeys = Object.keys(state.tables);
+  const tablesHeader = document.createElement('div');
+  tablesHeader.className = 'tree-node';
+  tablesHeader.innerHTML = `
+    <span class="tree-expander expanded" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+    <span class="tree-icon"><i class="fa-solid fa-folder text-gold"></i></span>
+    <span class="tree-label">Tables (${tableKeys.length})</span>
+    <div class="tree-node-actions">
+      <button class="tree-action-btn" title="New Table Designer" onclick="event.stopPropagation(); openTableDesignerTab()"><i class="fa-solid fa-plus"></i></button>
+    </div>
+  `;
+  tablesNode.appendChild(tablesHeader);
+
+  const tablesChildren = document.createElement('div');
+  tablesChildren.className = 'tree-children open';
+
+  if (tableKeys.length === 0) {
+    tablesChildren.innerHTML = `
+      <div class="tree-node text-muted" onclick="openTableDesignerTab()">
+        <span class="tree-label"><em>No tables. Click to create new table...</em></span>
+      </div>
+    `;
+  } else {
+    tableKeys.forEach(tName => {
+      const tData = state.tables[tName];
+      const isSelected = state.activeTable === tName && state.activeView === 'table-contents';
+
+      const tNode = document.createElement('div');
+      tNode.className = 'tree-item-group';
+
+      const tHeader = document.createElement('div');
+      tHeader.className = `tree-node ${isSelected ? 'active' : ''}`;
+      tHeader.oncontextmenu = (e) => showSSMSContextMenu(e, tName);
+      tHeader.onclick = () => openTableDataTab(tName);
+
+      const rowCount = tData.rows ? tData.rows.length : 0;
+      tHeader.innerHTML = `
+        <span class="tree-expander" onclick="event.stopPropagation(); toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+        <span class="tree-icon"><i class="fa-solid fa-table text-accent"></i></span>
+        <span class="tree-label">dbo.${tName}</span>
+        <div class="tree-node-actions">
+          <button class="tree-action-btn" title="Edit Top 200 Rows" onclick="event.stopPropagation(); openTableDataTab('${tName}')"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="tree-action-btn" title="Design Table" onclick="event.stopPropagation(); openTableDesignerForTable('${tName}')"><i class="fa-solid fa-table-columns"></i></button>
+          <button class="tree-action-btn text-danger" title="Delete Table" onclick="event.stopPropagation(); promptDeleteTable('${tName}')"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      `;
+      tNode.appendChild(tHeader);
+
+      // Columns & Keys under table
+      const tChildren = document.createElement('div');
+      tChildren.className = 'tree-children';
+
+      // Columns Folder
+      const colsFolder = document.createElement('div');
+      colsFolder.className = 'tree-item-group';
+      colsFolder.innerHTML = `
+        <div class="tree-node">
+          <span class="tree-expander" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+          <span class="tree-icon"><i class="fa-solid fa-folder"></i></span>
+          <span class="tree-label">Columns</span>
+        </div>
+      `;
+      const colsChildren = document.createElement('div');
+      colsChildren.className = 'tree-children';
+
+      (tData.columns || []).forEach(col => {
+        const isFk = (tData.foreignKeys || []).some(fk => fk.column === col.name);
+        let keyIcon = '';
+        if (col.pk) keyIcon = '<i class="fa-solid fa-key badge-pk"></i> ';
+        else if (isFk) keyIcon = '<i class="fa-solid fa-link badge-fk"></i> ';
+
+        const nullText = col.nn ? 'not null' : 'null';
+        const colEl = document.createElement('div');
+        colEl.className = 'tree-node';
+        colEl.innerHTML = `
+          <span class="tree-icon">${keyIcon || '<i class="fa-solid fa-table-cells text-muted"></i>'}</span>
+          <span class="tree-label">${col.name} (${col.type.toLowerCase()}, ${nullText})</span>
+        `;
+        colsChildren.appendChild(colEl);
+      });
+      colsFolder.appendChild(colsChildren);
+      tChildren.appendChild(colsFolder);
+
+      // Keys Folder
+      const keysFolder = document.createElement('div');
+      keysFolder.className = 'tree-item-group';
+      keysFolder.innerHTML = `
+        <div class="tree-node">
+          <span class="tree-expander" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+          <span class="tree-icon"><i class="fa-solid fa-folder"></i></span>
+          <span class="tree-label">Keys</span>
+        </div>
+      `;
+      const keysChildren = document.createElement('div');
+      keysChildren.className = 'tree-children';
+
+      const pkCol = (tData.columns || []).find(c => c.pk);
+      if (pkCol) {
+        keysChildren.innerHTML += `
+          <div class="tree-node"><span class="tree-icon"><i class="fa-solid fa-key badge-pk"></i></span><span class="tree-label">PK_${tName}</span></div>
+        `;
+      }
+      (tData.foreignKeys || []).forEach(fk => {
+        keysChildren.innerHTML += `
+          <div class="tree-node"><span class="tree-icon"><i class="fa-solid fa-link badge-fk"></i></span><span class="tree-label">FK_${tName}_${fk.refTable}</span></div>
+        `;
+      });
+      keysFolder.appendChild(keysChildren);
+      tChildren.appendChild(keysFolder);
+
+      tNode.appendChild(tChildren);
+      tablesChildren.appendChild(tNode);
+    });
+  }
+
+  tablesNode.appendChild(tablesChildren);
+  activeDbChildren.appendChild(tablesNode);
+
+  // Views Folder
+  const viewsNode = document.createElement('div');
+  viewsNode.className = 'tree-node text-muted';
+  viewsNode.innerHTML = `
+    <span class="tree-expander"><i class="fa-solid fa-caret-right" style="opacity:0;"></i></span>
+    <span class="tree-icon"><i class="fa-solid fa-folder"></i></span>
+    <span class="tree-label">Views</span>
+  `;
+  activeDbChildren.appendChild(viewsNode);
+
+  // Programmability Folder
+  const progNode = document.createElement('div');
+  progNode.className = 'tree-node text-muted';
+  progNode.innerHTML = `
+    <span class="tree-expander"><i class="fa-solid fa-caret-right" style="opacity:0;"></i></span>
+    <span class="tree-icon"><i class="fa-solid fa-folder"></i></span>
+    <span class="tree-label">Programmability</span>
+  `;
+  activeDbChildren.appendChild(progNode);
+
+  activeDbNode.appendChild(activeDbChildren);
+  dbFolderChildren.appendChild(activeDbNode);
+  dbFolderNode.appendChild(dbFolderChildren);
+  rootChildren.appendChild(dbFolderNode);
+
+  // SECURITY FOLDER
+  const secNode = document.createElement('div');
+  secNode.className = 'tree-item-group';
+  secNode.innerHTML = `
+    <div class="tree-node">
+      <span class="tree-expander" onclick="toggleTreeNode(this)"><i class="fa-solid fa-caret-right"></i></span>
+      <span class="tree-icon"><i class="fa-solid fa-shield-halved text-accent"></i></span>
+      <span class="tree-label">Security</span>
+    </div>
+    <div class="tree-children">
+      <div class="tree-node"><span class="tree-icon"><i class="fa-solid fa-user-lock"></i></span><span class="tree-label">Logins</span></div>
+      <div class="tree-node"><span class="tree-icon"><i class="fa-solid fa-users"></i></span><span class="tree-label">Server Roles</span></div>
+    </div>
+  `;
+  rootChildren.appendChild(secNode);
+
+  rootNode.appendChild(rootChildren);
+  container.appendChild(rootNode);
+}
+
+function toggleTreeNode(expanderEl) {
+  expanderEl.classList.toggle('expanded');
+  const parentNode = expanderEl.closest('.tree-item-group');
+  if (parentNode) {
+    const children = parentNode.querySelector('.tree-children');
+    if (children) children.classList.toggle('open');
+  }
+}
+
+function refreshObjectExplorer() {
+  renderObjectExplorer();
+  populateToolbarDbSelect();
+  showToast('Object Explorer refreshed', 'info');
+}
+
+function toggleObjectExplorer() {
+  const oe = document.getElementById('ssmsObjectExplorer');
+  if (oe) {
+    oe.classList.toggle('hidden');
+  }
+}
+
+function filterObjectExplorerTree(query) {
+  const q = query.trim().toLowerCase();
+  const nodes = document.querySelectorAll('#objectExplorerTree .tree-node');
+  nodes.forEach(n => {
+    const text = n.innerText.toLowerCase();
+    n.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+}
+
+function populateToolbarDbSelect() {
+  const select = document.getElementById('toolbarDbSelect');
+  if (!select) return;
+  select.innerHTML = '';
+
+  const opt1 = document.createElement('option');
+  opt1.value = state.dbName;
+  opt1.innerText = state.dbName;
+  opt1.selected = true;
+  select.appendChild(opt1);
+
+  ['master', 'model', 'msdb', 'tempdb'].forEach(sysDb => {
+    const opt = document.createElement('option');
+    opt.value = sysDb;
+    opt.innerText = sysDb;
+    select.appendChild(opt);
+  });
+}
+
+function handleToolbarDbChange(val) {
+  if (val !== state.dbName && !['master', 'model', 'msdb', 'tempdb'].includes(val)) {
+    state.dbName = val;
+    renderObjectExplorer();
+    updateConnectionUI();
+  }
+}
+
+/** =========================================================================
+ * SSMS CONTEXT MENU (RIGHT CLICK ACTIONS ON TABLE)
+ * ========================================================================= */
+
+function showSSMSContextMenu(e, tableName) {
+  e.preventDefault();
+  state.contextTargetTable = tableName;
+  const menu = document.getElementById('ssmsContextMenu');
+  if (!menu) return;
+
+  menu.style.left = `${Math.min(e.clientX, window.innerWidth - 190)}px`;
+  menu.style.top = `${Math.min(e.clientY, window.innerHeight - 220)}px`;
+  menu.classList.add('show');
+}
+
+function hideSSMSContextMenu() {
+  const menu = document.getElementById('ssmsContextMenu');
+  if (menu) menu.classList.remove('show');
+}
+
+function handleCtxSelectTop1000() {
+  hideSSMSContextMenu();
+  const tName = state.contextTargetTable || state.activeTable;
+  if (!tName) return;
+
+  openNewQueryTab(`-- Select Top 1000 Rows from [dbo].[${tName}]\nSELECT TOP 1000 * FROM [dbo].[${tName}];`);
+  runConsoleSqlQuery();
+}
+
+function handleCtxEditTop200() {
+  hideSSMSContextMenu();
+  const tName = state.contextTargetTable || state.activeTable;
+  if (tName) openTableDataTab(tName);
+}
+
+function handleCtxDesignTable() {
+  hideSSMSContextMenu();
+  const tName = state.contextTargetTable || state.activeTable;
+  if (tName) openTableDesignerForTable(tName);
+}
+
+function handleCtxScriptCreate() {
+  hideSSMSContextMenu();
+  const tName = state.contextTargetTable || state.activeTable;
+  const tData = state.tables[tName];
+  if (!tData) return;
+
+  let script = `-- Create Table Script for [dbo].[${tName}]\nCREATE TABLE [dbo].[${tName}] (\n`;
+  const colLines = (tData.columns || []).map(c => {
+    let line = `  [${c.name}] ${c.type}`;
+    if (c.pk) line += ' PRIMARY KEY';
+    if (c.nn) line += ' NOT NULL';
+    if (c.def) line += ` DEFAULT '${c.def}'`;
+    return line;
+  });
+  script += colLines.join(',\n') + '\n);\nGO';
+
+  openNewQueryTab(script);
+}
+
+function handleCtxRenameTable() {
+  hideSSMSContextMenu();
+  const tName = state.contextTargetTable || state.activeTable;
+  if (!tName) return;
+
+  const newName = prompt(`Enter new name for table "${tName}":`, tName);
+  if (newName && newName.trim() && newName.trim() !== tName) {
+    renameTable(tName, newName.trim());
+  }
+}
+
+function handleCtxDeleteTable() {
+  hideSSMSContextMenu();
+  const tName = state.contextTargetTable || state.activeTable;
+  if (tName) promptDeleteTable(tName);
+}
+
+/** =========================================================================
+ * GUARANTEED TABLE DELETION & SAFE REFERENTIAL INTEGRITY CLEANUP
+ * ========================================================================= */
+
+function promptDeleteTable(tableName) {
+  closeAllMenus();
+  if (!tableName || !state.tables[tableName]) return;
+
+  state.contextTargetTable = tableName;
+  const label = document.getElementById('deleteTargetTableName');
+  if (label) label.innerText = tableName;
+
+  // Check if any other table references this table via Foreign Key
+  const dependentFks = [];
+  Object.keys(state.tables).forEach(otherTName => {
+    if (otherTName !== tableName) {
+      (state.tables[otherTName].foreignKeys || []).forEach(fk => {
+        if (fk.refTable === tableName) {
+          dependentFks.push(`${otherTName}.${fk.column} &rarr; ${tableName}.${fk.refColumn}`);
+        }
+      });
+    }
+  });
+
+  const warningBox = document.getElementById('deleteDependentFkWarning');
+  const warningText = document.getElementById('deleteDependentFkText');
+  if (warningBox && warningText) {
+    if (dependentFks.length > 0) {
+      warningBox.classList.remove('hidden');
+      warningText.innerHTML = `The following foreign key relationships reference this table and will be cleanly removed to maintain integrity:<br><strong>${dependentFks.join(', ')}</strong>`;
+    } else {
+      warningBox.classList.add('hidden');
+    }
+  }
+
+  openModal('deleteTableModal');
+}
+
+function confirmExecuteTableDeletion() {
+  const tableName = state.contextTargetTable;
+  if (!tableName || !state.tables[tableName]) {
+    closeModal('deleteTableModal');
+    return;
+  }
+
+  deleteTableByName(tableName);
+  closeModal('deleteTableModal');
+}
+
+function deleteActiveTable() {
+  closeAllMenus();
+  if (state.activeTable) promptDeleteTable(state.activeTable);
+}
+
+function deleteTableByName(tableName) {
+  if (!state.tables[tableName]) return;
+
+  // 1. Remove table schema and rows
+  delete state.tables[tableName];
+  delete state.diagram.tablePositions[tableName];
+
+  // 2. Clean up any foreign key in OTHER tables that referenced this deleted table
+  Object.keys(state.tables).forEach(otherName => {
+    if (state.tables[otherName].foreignKeys) {
+      state.tables[otherName].foreignKeys = state.tables[otherName].foreignKeys.filter(
+        fk => fk.refTable !== tableName
+      );
+    }
+  });
+
+  // 3. Close open tabs for this table
+  state.tabs = state.tabs.filter(t => t.id !== `table:${tableName}` && t.id !== `design:${tableName}`);
+
+  // 4. Update active table pointer
+  const remainingTables = Object.keys(state.tables);
+  if (state.activeTable === tableName) {
+    state.activeTable = remainingTables.length > 0 ? remainingTables[0] : null;
+  }
+
+  // 5. If closed active tab, switch to next tab or new query
+  if (state.activeTabId === `table:${tableName}` || state.activeTabId === `design:${tableName}`) {
+    if (state.tabs.length > 0) {
+      const nextTab = state.tabs[state.tabs.length - 1];
+      switchActiveTab(nextTab.id);
+    } else if (state.activeTable) {
+      openTableDataTab(state.activeTable);
+    } else {
+      openNewQueryTab();
+    }
+  }
+
+  saveDatabaseToStorage();
+  renderObjectExplorer();
+  renderTabs();
+  renderActiveView();
+  showToast(`Table "dbo.${tableName}" deleted successfully.`, 'info');
+}
+
+function renameTable(oldName, newName) {
+  if (!oldName || !newName || !state.tables[oldName]) return;
+  if (state.tables[newName]) {
+    showToast(`Table "${newName}" already exists!`, 'danger');
+    return;
+  }
+
+  state.tables[newName] = state.tables[oldName];
+  delete state.tables[oldName];
+
+  if (state.diagram.tablePositions[oldName]) {
+    state.diagram.tablePositions[newName] = state.diagram.tablePositions[oldName];
+    delete state.diagram.tablePositions[oldName];
+  }
+
+  // Update foreign keys referencing old table
+  Object.keys(state.tables).forEach(t => {
+    (state.tables[t].foreignKeys || []).forEach(fk => {
+      if (fk.refTable === oldName) fk.refTable = newName;
+    });
+  });
+
+  // Update tabs
+  state.tabs.forEach(tab => {
+    if (tab.id === `table:${oldName}`) {
+      tab.id = `table:${newName}`;
+      tab.name = `dbo.${newName} [Edit]`;
+      tab.tableName = newName;
+    }
+    if (tab.id === `design:${oldName}`) {
+      tab.id = `design:${newName}`;
+      tab.name = `dbo.${newName} [Design]`;
+      tab.tableName = newName;
+    }
+  });
+  if (state.activeTabId === `table:${oldName}`) state.activeTabId = `table:${newName}`;
+  if (state.activeTabId === `design:${oldName}`) state.activeTabId = `design:${newName}`;
+  if (state.activeTable === oldName) state.activeTable = newName;
+
+  saveDatabaseToStorage();
+  renderObjectExplorer();
+  renderTabs();
+  renderActiveView();
+  showToast(`Table renamed to "dbo.${newName}"`, 'success');
+}
+
+/** =========================================================================
+ * SSMS TABLE DESIGNER (SAFE SCHEMA EDITING FOR 1ST, 2ND & ALL TABLES)
+ * ========================================================================= */
+
+function openTableDesignerTab() {
+  closeAllMenus();
+  state.designer.isNew = true;
+  state.designer.editingTableName = '';
+
+  const designerTabId = 'design:NewTable';
+  if (!state.tabs.find(t => t.id === designerTabId)) {
+    state.tabs.push({ id: designerTabId, type: 'designer', name: 'dbo.NewTable [Design]', icon: 'fa-table-columns' });
+  }
+  state.activeTabId = designerTabId;
+  state.activeView = 'table-designer';
+
+  const titleEl = document.getElementById('designerTitle');
+  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-table-columns text-accent"></i> <span>dbo.NewTable [Design]</span>`;
+  const nameInput = document.getElementById('designerTableNameInput');
+  if (nameInput) nameInput.value = 'Table1';
+
+  const tbody = document.getElementById('designerColumnsTbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    addDesignerColumnRow('id', 'INTEGER', true, true, true, '');
+    addDesignerColumnRow('name', 'TEXT', false, true, false, '');
+  }
+
+  renderTabs();
+  renderActiveView();
+}
+
+function openTableDesignerForActiveTable() {
+  if (state.activeTable) openTableDesignerForTable(state.activeTable);
+}
+
+function openTableDesignerForTable(tableName) {
+  closeAllMenus();
+  if (!tableName || !state.tables[tableName]) return;
+
+  state.designer.isNew = false;
+  state.designer.editingTableName = tableName;
+
+  const designerTabId = `design:${tableName}`;
+  if (!state.tabs.find(t => t.id === designerTabId)) {
+    state.tabs.push({ id: designerTabId, type: 'designer', name: `dbo.${tableName} [Design]`, tableName: tableName, icon: 'fa-table-columns' });
+  }
+  state.activeTabId = designerTabId;
+  state.activeView = 'table-designer';
+
+  const titleEl = document.getElementById('designerTitle');
+  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-table-columns text-accent"></i> <span>dbo.${tableName} [Design]</span>`;
+  const nameInput = document.getElementById('designerTableNameInput');
+  if (nameInput) nameInput.value = tableName;
+
+  const tbody = document.getElementById('designerColumnsTbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    const tableData = state.tables[tableName];
+    (tableData.columns || []).forEach(col => {
+      addDesignerColumnRow(col.name, col.type, col.pk, col.nn, col.uq, col.def, col.name);
+    });
+  }
+
+  renderTabs();
+  renderActiveView();
+}
+
+function addDesignerColumnRow(name = '', type = 'TEXT', pk = false, nn = false, uq = false, def = '', oldName = '') {
+  const tbody = document.getElementById('designerColumnsTbody');
+  if (!tbody) return;
+
   const tr = document.createElement('tr');
   const origName = oldName || name;
+
   tr.innerHTML = `
-    <td><input type="text" class="form-control col-name" data-old-name="${origName}" value="${name}" placeholder="attribute_name" required></td>
+    <td style="text-align: center;">
+      <button type="button" class="btn-icon-xs col-pk-btn ${pk ? 'active-pk' : ''}" title="Toggle Primary Key" onclick="toggleDesignerRowPk(this)">
+        <i class="fa-solid fa-key ${pk ? 'badge-pk' : 'text-muted'}"></i>
+      </button>
+      <input type="checkbox" class="col-pk-check hidden" ${pk ? 'checked' : ''}>
+    </td>
     <td>
-      <select class="form-control col-type">
-        <option value="INTEGER" ${type === 'INTEGER' ? 'selected' : ''}>INTEGER</option>
-        <option value="TEXT" ${type === 'TEXT' ? 'selected' : ''}>TEXT</option>
-        <option value="REAL" ${type === 'REAL' ? 'selected' : ''}>REAL</option>
-        <option value="DATETIME" ${type === 'DATETIME' ? 'selected' : ''}>DATETIME</option>
+      <input type="text" class="designer-col-name" data-old-name="${origName}" value="${name}" placeholder="Column name" onfocus="updatePropertiesPane(this)">
+    </td>
+    <td>
+      <select class="designer-col-type" onchange="updatePropertiesPane(this)">
+        <option value="INTEGER" ${type.toUpperCase() === 'INTEGER' ? 'selected' : ''}>int (INTEGER)</option>
+        <option value="TEXT" ${type.toUpperCase() === 'TEXT' ? 'selected' : ''}>varchar(50) (TEXT)</option>
+        <option value="REAL" ${type.toUpperCase() === 'REAL' ? 'selected' : ''}>decimal(18,2) (REAL)</option>
+        <option value="DATETIME" ${type.toUpperCase() === 'DATETIME' ? 'selected' : ''}>datetime (DATETIME)</option>
       </select>
     </td>
-    <td><input type="checkbox" class="col-pk" ${pk ? 'checked' : ''}></td>
-    <td><input type="checkbox" class="col-nn" ${nn ? 'checked' : ''}></td>
-    <td><button type="button" class="btn-icon-xs text-danger" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash-can"></i></button></td>
+    <td style="text-align: center;">
+      <input type="checkbox" class="designer-col-null" ${!nn ? 'checked' : ''} onchange="updatePropertiesPane(this)">
+    </td>
+    <td style="text-align: center;">
+      <input type="checkbox" class="designer-col-uq" ${uq ? 'checked' : ''}>
+    </td>
+    <td>
+      <input type="text" class="designer-col-def" value="${def || ''}" placeholder="((NULL))">
+    </td>
+    <td style="text-align: center;">
+      <button type="button" class="btn-icon-xs text-danger" title="Delete Column" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash-can"></i></button>
+    </td>
   `;
+
   tbody.appendChild(tr);
+  tr.onclick = () => {
+    tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+    tr.classList.add('selected');
+    updatePropertiesPane(tr.querySelector('.designer-col-name'));
+  };
 }
 
-function handleCreateTableSubmit(e) {
-  e.preventDefault();
-  const oldTableName = (document.getElementById('editingOldTableName') ? document.getElementById('editingOldTableName').value : '').trim();
-  const newTableName = document.getElementById('newTableName').value.trim();
-  if (!newTableName) return;
+function toggleDesignerRowPk(btn) {
+  const tr = btn.closest('tr');
+  const check = tr.querySelector('.col-pk-check');
+  const icon = btn.querySelector('i');
+  const nullCheck = tr.querySelector('.designer-col-null');
 
-  const trs = document.querySelectorAll('#createTableColumnsTbody tr');
+  const isPk = !check.checked;
+  check.checked = isPk;
+  if (isPk) {
+    icon.className = 'fa-solid fa-key badge-pk';
+    btn.classList.add('active-pk');
+    if (nullCheck) nullCheck.checked = false; // PK cannot be null
+  } else {
+    icon.className = 'fa-solid fa-key text-muted';
+    btn.classList.remove('active-pk');
+  }
+}
+
+function updatePropertiesPane(el) {
+  const tr = el.closest('tr');
+  if (!tr) return;
+
+  const colName = tr.querySelector('.designer-col-name').value || '(unnamed)';
+  const colType = tr.querySelector('.designer-col-type').value;
+  const isNull = tr.querySelector('.designer-col-null').checked;
+  const isPk = tr.querySelector('.col-pk-check').checked;
+
+  const titleDisp = document.getElementById('propColNameDisplay');
+  const nameVal = document.getElementById('propNameVal');
+  const typeVal = document.getElementById('propTypeVal');
+  const nullVal = document.getElementById('propNullVal');
+  const idVal = document.getElementById('propIdentityVal');
+
+  if (titleDisp) titleDisp.innerText = colName;
+  if (nameVal) nameVal.innerText = colName;
+  if (typeVal) typeVal.innerText = colType;
+  if (nullVal) nullVal.innerText = isNull ? 'Yes' : 'No';
+  if (idVal) idVal.innerText = isPk ? 'Yes (Primary Key)' : 'No';
+}
+
+function handleSaveTableDesigner() {
+  const oldTableName = state.designer.editingTableName;
+  const newTableName = (document.getElementById('designerTableNameInput').value || '').trim();
+
+  if (!newTableName) {
+    showToast('Please specify a table name', 'danger');
+    return;
+  }
+
+  const trs = document.querySelectorAll('#designerColumnsTbody tr');
   const newColumns = [];
+
   trs.forEach(tr => {
-    const nameInput = tr.querySelector('.col-name');
+    const nameInput = tr.querySelector('.designer-col-name');
     const colName = nameInput.value.trim();
     const oldColName = (nameInput.getAttribute('data-old-name') || '').trim();
-    const colType = tr.querySelector('.col-type').value;
-    const pk = tr.querySelector('.col-pk').checked;
-    const nn = tr.querySelector('.col-nn').checked;
+    const colType = tr.querySelector('.designer-col-type').value;
+    const pk = tr.querySelector('.col-pk-check').checked;
+    const nn = !tr.querySelector('.designer-col-null').checked; // Allow null unchecked means NOT NULL
+    const uq = tr.querySelector('.designer-col-uq').checked;
+    const def = tr.querySelector('.designer-col-def').value.trim();
 
     if (colName) {
-      newColumns.push({ name: colName, oldName: oldColName, type: colType, pk, nn });
+      newColumns.push({ name: colName, oldName: oldColName, type: colType, pk, nn, uq, def });
     }
   });
 
   if (newColumns.length === 0) {
-    showToast('Please define at least one column attribute', 'danger');
+    showToast('Please define at least one column for the table', 'danger');
     return;
   }
 
-  // Preserve existing row contents & migrate attributes when renamed
+  // Preserve existing rows and migrate data safely
   let finalRows = [];
+  let existingFks = [];
+
   if (oldTableName && state.tables[oldTableName]) {
     const oldRows = state.tables[oldTableName].rows || [];
-    const oldColumns = state.tables[oldTableName].columns || [];
+    existingFks = state.tables[oldTableName].foreignKeys || [];
 
     finalRows = oldRows.map(row => {
       const migratedRow = {};
-      newColumns.forEach((newCol, colIdx) => {
-        // 1. Direct attribute match
+      newColumns.forEach(newCol => {
         if (row[newCol.name] !== undefined) {
           migratedRow[newCol.name] = row[newCol.name];
-        } 
-        // 2. Renamed attribute match from oldName
-        else if (newCol.oldName && row[newCol.oldName] !== undefined) {
+        } else if (newCol.oldName && row[newCol.oldName] !== undefined) {
           migratedRow[newCol.name] = row[newCol.oldName];
-        } 
-        // 3. Positional attribute match by column index
-        else if (oldColumns[colIdx] && row[oldColumns[colIdx].name] !== undefined) {
-          migratedRow[newCol.name] = row[oldColumns[colIdx].name];
-        } 
-        // Default empty string
-        else {
-          migratedRow[newCol.name] = '';
+        } else {
+          migratedRow[newCol.name] = newCol.def || '';
         }
       });
       return migratedRow;
@@ -903,85 +1227,288 @@ function handleCreateTableSubmit(e) {
 
     if (oldTableName !== newTableName) {
       delete state.tables[oldTableName];
-      const oldTab = state.tabs.find(t => t.id === `table:${oldTableName}`);
-      if (oldTab) {
-        oldTab.id = `table:${newTableName}`;
-        oldTab.name = newTableName;
+      if (state.diagram.tablePositions[oldTableName]) {
+        state.diagram.tablePositions[newTableName] = state.diagram.tablePositions[oldTableName];
+        delete state.diagram.tablePositions[oldTableName];
       }
-      if (state.activeTabId === `table:${oldTableName}`) {
-        state.activeTabId = `table:${newTableName}`;
-      }
+      // Update foreign keys pointing to old table
+      Object.keys(state.tables).forEach(t => {
+        (state.tables[t].foreignKeys || []).forEach(fk => {
+          if (fk.refTable === oldTableName) fk.refTable = newTableName;
+        });
+      });
     }
   }
 
-  // Clean column definitions for storage
-  const cleanedColumns = newColumns.map(({ name, type, pk, nn }) => ({ name, type, pk, nn }));
+  const cleanedColumns = newColumns.map(({ name, type, pk, nn, uq, def }) => ({ name, type, pk, nn, uq, def }));
 
   state.tables[newTableName] = {
     columns: cleanedColumns,
+    foreignKeys: existingFks,
     rows: finalRows
   };
   state.activeTable = newTableName;
+  state.designer.editingTableName = newTableName;
+  state.designer.isNew = false;
 
-  closeModal('createTableModal');
+  // Update tabs
+  const curTab = state.tabs.find(t => t.id === state.activeTabId);
+  if (curTab) {
+    curTab.id = `design:${newTableName}`;
+    curTab.name = `dbo.${newTableName} [Design]`;
+    curTab.tableName = newTableName;
+    state.activeTabId = curTab.id;
+  }
+
   saveDatabaseToStorage();
-  openTableTab(newTableName);
-  renderSidebar();
+  renderObjectExplorer();
+  renderTabs();
+  showToast(`Table "dbo.${newTableName}" schema saved successfully!`, 'success');
+}
+
+/** =========================================================================
+ * SSMS TABLE DATA EDITOR ("Edit Top 200 Rows")
+ * ========================================================================= */
+
+function openTableDataTab(tableName) {
+  closeAllMenus();
+  if (!state.tables[tableName]) return;
+
+  state.activeTable = tableName;
+  state.activeView = 'table-contents';
+
+  const tabId = `table:${tableName}`;
+  if (!state.tabs.find(t => t.id === tabId)) {
+    state.tabs.push({ id: tabId, type: 'table', name: `dbo.${tableName} [Edit]`, tableName: tableName, icon: 'fa-table' });
+  }
+  state.activeTabId = tabId;
+
+  renderObjectExplorer();
   renderTabs();
   renderActiveView();
-  showToast(`Table "${newTableName}" modified. All attribute contents preserved!`, 'success');
 }
 
-/** EDIT / MODIFY SCHEMA MODAL */
-function openEditSchemaModal(targetTable = null) {
-  const tableName = targetTable || state.activeTable;
-  if (!tableName || !state.tables[tableName]) return;
+function renderTableContents() {
+  const tableName = state.activeTable;
+  const tableData = state.tables[tableName];
 
-  const oldInput = document.getElementById('editingOldTableName');
-  if (oldInput) oldInput.value = tableName;
+  const titleEl = document.getElementById('activeTableName');
+  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-table text-accent"></i> dbo.${tableName || 'No Table'}`;
 
-  document.getElementById('newTableName').value = tableName;
-  const tbody = document.getElementById('createTableColumnsTbody');
-  tbody.innerHTML = '';
+  const rowCountEl = document.getElementById('activeTableRowCount');
+  const colCountEl = document.getElementById('activeTableColCount');
 
-  state.tables[tableName].columns.forEach(col => {
-    addCreateTableColumnRow(col.name, col.type, col.pk, col.nn, col.name);
+  if (!tableData) {
+    document.getElementById('mainDataTableHeader').innerHTML = '';
+    document.getElementById('mainDataTableBody').innerHTML = `<tr><td colspan="10" class="p-4 text-muted">Table "${tableName}" not found.</td></tr>`;
+    if (rowCountEl) rowCountEl.innerText = '0 rows';
+    if (colCountEl) colCountEl.innerText = '0 cols';
+    return;
+  }
+
+  const columns = tableData.columns || [];
+  let rows = [...(tableData.rows || [])];
+
+  if (rowCountEl) rowCountEl.innerText = `${rows.length} rows`;
+  if (colCountEl) colCountEl.innerText = `${columns.length} cols`;
+
+  // Render Header
+  const headerTr = document.getElementById('mainDataTableHeader');
+  headerTr.innerHTML = '<th style="width: 44px; text-align: center;">#</th>';
+
+  columns.forEach(col => {
+    let sortIndicator = '';
+    if (state.sort.column === col.name) {
+      sortIndicator = `<span class="text-accent ml-1">${state.sort.direction === 'asc' ? '▲' : '▼'}</span>`;
+    }
+
+    let badges = '';
+    if (col.pk) badges += '<span class="badge-pk ml-1" title="Primary Key"><i class="fa-solid fa-key"></i></span>';
+    if (col.uq) badges += '<span class="text-info ml-1" style="font-size: 9px; font-weight: 700;">UQ</span>';
+    if (col.nn) badges += '<span class="text-danger ml-1" style="font-size: 9px; font-weight: 700;">*</span>';
+
+    const isFk = (tableData.foreignKeys || []).some(fk => fk.column === col.name);
+    if (isFk) badges += '<span class="badge-fk ml-1" title="Foreign Key"><i class="fa-solid fa-link"></i></span>';
+
+    headerTr.innerHTML += `
+      <th class="sortable-th" onclick="sortTableByColumn('${col.name}')" title="Sort by ${col.name}">
+        <span>${col.name}</span>
+        <small class="text-muted" style="font-size: 10px; font-weight: normal;">(${col.type})</small>
+        ${badges}
+        ${sortIndicator}
+      </th>
+    `;
   });
+  headerTr.innerHTML += `<th style="width: 70px; text-align: center;">Actions</th>`;
 
-  openModal('createTableModal');
-}
-
-/** DELETE TABLE */
-function deleteActiveTable() {
-  if (state.activeTable) {
-    deleteTableByName(state.activeTable);
+  // Sorting
+  if (state.sort.column) {
+    const colName = state.sort.column;
+    const dir = state.sort.direction === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      let valA = a[colName] !== undefined ? a[colName] : '';
+      let valB = b[colName] !== undefined ? b[colName] : '';
+      if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
+      return String(valA).localeCompare(String(valB)) * dir;
+    });
   }
+
+  // Pagination
+  const totalRows = rows.length;
+  const pageSize = state.pagination.pageSize === 'all' ? (totalRows || 1) : parseInt(state.pagination.pageSize, 10);
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+  if (state.pagination.currentPage > totalPages) state.pagination.currentPage = totalPages;
+  if (state.pagination.currentPage < 1) state.pagination.currentPage = 1;
+
+  const startIndex = (state.pagination.currentPage - 1) * pageSize;
+  const pageRows = rows.slice(startIndex, startIndex + pageSize);
+
+  renderTableRows(pageRows, columns, startIndex);
+
+  const summary = document.getElementById('gridFooterSummary');
+  if (summary) summary.innerText = `Showing ${totalRows === 0 ? 0 : startIndex + 1}-${Math.min(startIndex + pageSize, totalRows)} of ${totalRows} records`;
+
+  const pageText = document.getElementById('pageIndicatorText');
+  if (pageText) pageText.innerText = `Page ${state.pagination.currentPage} of ${totalPages}`;
+
+  const sbRows = document.getElementById('sbRowCount');
+  if (sbRows) sbRows.innerText = `${totalRows} rows`;
 }
 
-function deleteTableByName(tableName) {
-  if (confirm(`Are you sure you want to delete table "${tableName}"?`)) {
-    delete state.tables[tableName];
-    closeTab(new Event('click'), `table:${tableName}`);
-    state.activeTable = Object.keys(state.tables)[0] || null;
-    renderSidebar();
-    renderTabs();
-    renderActiveView();
+function renderTableRows(rows, columns, offset = 0) {
+  const body = document.getElementById('mainDataTableBody');
+  body.innerHTML = '';
+
+  const tableName = state.activeTable;
+  const fks = (state.tables[tableName] && state.tables[tableName].foreignKeys) ? state.tables[tableName].foreignKeys : [];
+
+  if (rows.length === 0) {
+    body.innerHTML = `<tr><td colspan="${columns.length + 2}" class="p-4 text-muted text-center">No rows. Click "+ Add Row" to insert data into dbo.${tableName}.</td></tr>`;
+    return;
+  }
+
+  rows.forEach((row, index) => {
+    const originalRowIndex = offset + index;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="text-align: center; color: var(--text-muted);">${originalRowIndex + 1}</td>`;
+
+    columns.forEach(col => {
+      const val = row[col.name] !== undefined ? row[col.name] : '';
+      const fkMatch = fks.find(fk => fk.column === col.name);
+
+      let cellContent = escapeHtml(val);
+      if (fkMatch && val !== '' && val !== null && val !== undefined) {
+        cellContent = `
+          <span class="fk-pill" title="Foreign Key referencing ${fkMatch.refTable}.${fkMatch.refColumn}" onclick="event.stopPropagation(); navigateToRelatedRow('${fkMatch.refTable}', '${fkMatch.refColumn}', '${escapeHtml(val)}')">
+            <i class="fa-solid fa-link"></i> ${escapeHtml(val)} &rarr; ${fkMatch.refTable}
+          </span>
+        `;
+      }
+
+      tr.innerHTML += `
+        <td class="editable-cell" 
+            data-row-idx="${originalRowIndex}" 
+            data-col-name="${col.name}" 
+            ondblclick="startInlineEdit(this, ${originalRowIndex}, '${col.name}')" 
+            title="Double-click to edit cell">
+          ${cellContent}
+        </td>
+      `;
+    });
+
+    tr.innerHTML += `
+      <td style="text-align: center;">
+        <div class="flex-center" style="justify-content: center; gap: 4px;">
+          <button class="btn-icon-xs" title="Edit Record" onclick="openEditRecordModal(${originalRowIndex})"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn-icon-xs text-danger" title="Delete Record" onclick="deleteRecordRow(${originalRowIndex})"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function startInlineEdit(td, rowIndex, colName) {
+  if (td.querySelector('input')) return;
+
+  const tableName = state.activeTable;
+  const tableData = state.tables[tableName];
+  if (!tableData || !tableData.rows[rowIndex]) return;
+
+  const currentVal = tableData.rows[rowIndex][colName] !== undefined ? tableData.rows[rowIndex][colName] : '';
+  const colDef = tableData.columns.find(c => c.name === colName);
+
+  const input = document.createElement('input');
+  input.type = (colDef && (colDef.type === 'INTEGER' || colDef.type === 'REAL')) ? 'number' : 'text';
+  input.className = 'inline-cell-input';
+  input.value = currentVal;
+
+  td.innerHTML = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+
+  const commitEdit = () => {
+    let newVal = input.value.trim();
+    if (input.type === 'number') newVal = newVal !== '' ? Number(newVal) : '';
+
+    if (colDef && colDef.nn && (newVal === '' || newVal === null)) {
+      showToast(`Column "${colName}" cannot be null`, 'danger');
+      renderTableContents();
+      return;
+    }
+
+    if (colDef && colDef.uq && newVal !== '') {
+      const exists = tableData.rows.some((r, idx) => idx !== rowIndex && String(r[colName]) === String(newVal));
+      if (exists) {
+        showToast(`UNIQUE violation on "${colName}"`, 'danger');
+        renderTableContents();
+        return;
+      }
+    }
+
+    tableData.rows[rowIndex][colName] = newVal;
     saveDatabaseToStorage();
-    showToast(`Table "${tableName}" deleted`, 'info');
+    renderTableContents();
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') commitEdit();
+    else if (e.key === 'Escape') renderTableContents();
+  });
+  input.addEventListener('blur', commitEdit);
+}
+
+function deleteRecordRow(index) {
+  const tableName = state.activeTable;
+  const tableData = state.tables[tableName];
+  if (!tableData || !tableData.rows[index]) return;
+
+  if (confirm(`Delete row #${index + 1} from dbo.${tableName}?`)) {
+    tableData.rows.splice(index, 1);
+    saveDatabaseToStorage();
+    renderTableContents();
+    renderObjectExplorer();
+    showToast(`Deleted row #${index + 1}`, 'info');
   }
 }
 
-/** ADD / EDIT RECORD ROW MODAL */
 function openAddRecordModal() {
   const tableName = state.activeTable;
   const tableData = state.tables[tableName];
   if (!tableData) return;
 
   state.editingRowIndex = null;
-  document.getElementById('recordModalTitle').innerText = `Add Record to "${tableName}"`;
-  document.getElementById('recordModalSub').innerText = 'Enter values for each column field';
+  document.getElementById('recordModalTitle').innerText = `Add Record to dbo.${tableName}`;
+  document.getElementById('recordModalSub').innerText = 'Enter values for row fields';
 
-  renderRecordFormFields({});
+  const defaultObj = {};
+  tableData.columns.forEach(col => {
+    if (col.def) defaultObj[col.name] = col.def;
+  });
+
+  renderRecordFormFields(defaultObj);
   openModal('recordModal');
 }
 
@@ -991,8 +1518,8 @@ function openEditRecordModal(rowIndex) {
   if (!tableData || !tableData.rows[rowIndex]) return;
 
   state.editingRowIndex = rowIndex;
-  document.getElementById('recordModalTitle').innerText = `Edit Record in "${tableName}"`;
-  document.getElementById('recordModalSub').innerText = `Editing Row #${rowIndex + 1}`;
+  document.getElementById('recordModalTitle').innerText = `Edit Record in dbo.${tableName}`;
+  document.getElementById('recordModalSub').innerText = `Row #${rowIndex + 1}`;
 
   renderRecordFormFields(tableData.rows[rowIndex]);
   openModal('recordModal');
@@ -1001,21 +1528,36 @@ function openEditRecordModal(rowIndex) {
 function renderRecordFormFields(rowObj) {
   const tableName = state.activeTable;
   const columns = state.tables[tableName].columns;
+  const fks = state.tables[tableName].foreignKeys || [];
 
   const container = document.getElementById('recordFieldsContainer');
   container.innerHTML = '';
 
   columns.forEach(col => {
     const val = rowObj[col.name] !== undefined ? rowObj[col.name] : '';
+    const fkMatch = fks.find(fk => fk.column === col.name);
+
     const fieldGroup = document.createElement('div');
     fieldGroup.className = 'form-group';
+
+    let badges = '';
+    if (col.pk) badges += ' <span class="badge-pk">(PK)</span>';
+    if (col.uq) badges += ' <span class="text-info">(UQ)</span>';
+    if (col.nn) badges += ' <span class="text-danger">*</span>';
+
+    let fkHint = '';
+    if (fkMatch) {
+      fkHint = `<small class="form-help text-accent"><i class="fa-solid fa-link"></i> References ${fkMatch.refTable}.${fkMatch.refColumn}</small>`;
+    }
+
     fieldGroup.innerHTML = `
-      <label>${col.name} <small class="text-muted">(${col.type})</small></label>
+      <label>${col.name} <small class="text-muted">(${col.type})</small>${badges}</label>
       <input type="${col.type === 'INTEGER' || col.type === 'REAL' ? 'number' : 'text'}" 
              class="form-control record-input-field" 
              data-col-name="${col.name}" 
              value="${val}" 
-             ${col.nn ? 'required' : ''}>
+             ${col.nn && !col.pk ? 'required' : ''}>
+      ${fkHint}
     `;
     container.appendChild(fieldGroup);
   });
@@ -1037,505 +1579,1127 @@ function handleRecordFormSubmit(e) {
     recordRow[colName] = val;
   });
 
+  for (let col of tableData.columns) {
+    if (col.uq && recordRow[col.name] !== undefined && recordRow[col.name] !== '') {
+      const exists = tableData.rows.some((r, idx) => {
+        if (state.editingRowIndex !== null && idx === state.editingRowIndex) return false;
+        return String(r[col.name]) === String(recordRow[col.name]);
+      });
+      if (exists) {
+        showToast(`UNIQUE violation on "${col.name}" with value "${recordRow[col.name]}"`, 'danger');
+        return;
+      }
+    }
+  }
+
   if (state.editingRowIndex !== null) {
-    const pkCol = tableData.columns.find(c => c.pk) || tableData.columns[0];
-    const pkVal = tableData.rows[state.editingRowIndex] ? tableData.rows[state.editingRowIndex][pkCol.name] : undefined;
     tableData.rows[state.editingRowIndex] = recordRow;
-    const sqlStr = generateUpdateSql(tableName, recordRow, pkCol ? pkCol.name : null, pkVal);
-    showToast(`Executed: ${sqlStr}`, 'success');
+    showToast(`Updated row in dbo.${tableName}`, 'success');
   } else {
     tableData.rows.push(recordRow);
-    const sqlStr = generateInsertSql(tableName, recordRow);
-    showToast(`Executed: ${sqlStr}`, 'success');
+    showToast(`Inserted row into dbo.${tableName}`, 'success');
   }
 
   closeModal('recordModal');
   saveDatabaseToStorage();
   renderTableContents();
+  renderObjectExplorer();
 }
 
-function deleteRecordRow(index) {
-  const tableName = state.activeTable;
-  const tableData = state.tables[tableName];
-  if (!tableData || !tableData.rows[index]) return;
-
-  if (confirm('Delete this record?')) {
-    const pkCol = tableData.columns.find(c => c.pk) || tableData.columns[0];
-    const pkVal = tableData.rows[index][pkCol ? pkCol.name : ''];
-    const sqlStr = generateDeleteSql(tableName, pkCol ? pkCol.name : null, pkVal);
-
-    tableData.rows.splice(index, 1);
-    saveDatabaseToStorage();
-    renderTableContents();
-    showToast(`Executed: ${sqlStr}`, 'info');
+function navigateToRelatedRow(targetTable, targetCol, value) {
+  if (!state.tables[targetTable]) return;
+  openTableDataTab(targetTable);
+  const searchInput = document.getElementById('tableDataSearchInput');
+  if (searchInput) {
+    searchInput.value = String(value);
+    filterTableDataRows(String(value));
   }
+  showToast(`Jumped to dbo.${targetTable} where ${targetCol} = "${value}"`, 'info');
 }
 
-/** CREATE FOLDER MODAL */
-function openCreateFolderModal() {
-  document.getElementById('newFolderName').value = '';
-  openModal('createFolderModal');
+function filterTableDataRows(query) {
+  const q = query.trim().toLowerCase();
+  const rows = document.querySelectorAll('#mainDataTableBody tr');
+  rows.forEach(r => {
+    const text = r.innerText.toLowerCase();
+    r.style.display = text.includes(q) ? '' : 'none';
+  });
 }
 
-function handleCreateFolderSubmit(e) {
-  e.preventDefault();
-  const name = document.getElementById('newFolderName').value.trim();
-  if (!name) return;
+function sortTableByColumn(colName) {
+  if (state.sort.column === colName) {
+    if (state.sort.direction === 'asc') state.sort.direction = 'desc';
+    else { state.sort.column = null; state.sort.direction = 'asc'; }
+  } else {
+    state.sort.column = colName;
+    state.sort.direction = 'asc';
+  }
+  renderTableContents();
+}
 
-  const fId = 'f_' + Date.now();
-  state.folders[fId] = {
-    id: fId,
-    name: name,
-    icon: 'fa-folder',
-    files: []
-  };
+function changePageSize(val) {
+  state.pagination.pageSize = val;
+  state.pagination.currentPage = 1;
+  renderTableContents();
+}
 
-  closeModal('createFolderModal');
-  saveDatabaseToStorage();
-  renderSidebar();
-  showToast(`Folder "${name}" created`, 'success');
+function goToPage(action) {
+  const tableName = state.activeTable;
+  const totalRows = (state.tables[tableName] && state.tables[tableName].rows) ? state.tables[tableName].rows.length : 0;
+  const pageSize = state.pagination.pageSize === 'all' ? (totalRows || 1) : parseInt(state.pagination.pageSize, 10);
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+  if (action === 'first') state.pagination.currentPage = 1;
+  else if (action === 'prev') state.pagination.currentPage = Math.max(1, state.pagination.currentPage - 1);
+  else if (action === 'next') state.pagination.currentPage = Math.min(totalPages, state.pagination.currentPage + 1);
+  else if (action === 'last') state.pagination.currentPage = totalPages;
+
+  renderTableContents();
 }
 
 /** =========================================================================
- * ACCURATE SQL GENERATOR & EXECUTION ENGINE
- * Supports: SELECT, INSERT INTO, UPDATE, DELETE FROM, CREATE TABLE, DROP TABLE
+ * SSMS DOCUMENT TABS ARCHITECTURE (MDI)
  * ========================================================================= */
 
-/** Generate accurate CREATE TABLE DDL SQL statement string */
-function generateCreateTableSql(tableName, columns) {
-  const colDefs = columns.map(c => {
-    let def = `  "${c.name}" ${c.type}`;
-    if (c.pk) def += " PRIMARY KEY";
-    if (c.nn) def += " NOT NULL";
-    return def;
-  }).join(",\n");
-  return `CREATE TABLE "${tableName}" (\n${colDefs}\n);`;
+function openNewQueryTab(initialSql = '') {
+  closeAllMenus();
+  state.queryCounter++;
+  const tabId = `query:${state.queryCounter}`;
+  const tabName = `SQLQuery${state.queryCounter}.sql`;
+
+  state.tabs.push({ id: tabId, type: 'query', name: tabName, sql: initialSql, icon: 'fa-file-code' });
+  state.activeTabId = tabId;
+  state.activeView = 'sql-query';
+
+  renderTabs();
+  renderActiveView();
+
+  const input = document.getElementById('consoleQueryInput');
+  if (input) {
+    input.value = initialSql || `-- SQL Query (${tabName})\nSELECT * FROM Users;`;
+    input.focus();
+    setupLineNumbers();
+  }
 }
 
-/** Generate accurate INSERT DML SQL statement string */
-function generateInsertSql(tableName, rowObj) {
-  const cols = Object.keys(rowObj);
-  const vals = cols.map(c => {
-    const v = rowObj[c];
-    if (v === null || v === undefined || v === '') return 'NULL';
-    if (typeof v === 'number') return v;
-    return `'${String(v).replace(/'/g, "''")}'`;
-  });
-  return `INSERT INTO "${tableName}" (${cols.map(c => `"${c}"`).join(", ")}) VALUES (${vals.join(", ")});`;
+function openErDiagramTab() {
+  closeAllMenus();
+  state.activeView = 'er-diagram';
+  const tabId = 'er-diagram';
+  if (!state.tabs.find(t => t.id === tabId)) {
+    state.tabs.push({ id: tabId, type: 'diagram', name: 'Database Diagrams', icon: 'fa-diagram-project' });
+  }
+  state.activeTabId = tabId;
+
+  renderTabs();
+  renderActiveView();
 }
 
-/** Generate accurate UPDATE DML SQL statement string */
-function generateUpdateSql(tableName, rowObj, whereCol, whereVal) {
-  const setClause = Object.keys(rowObj).map(c => {
-    const v = rowObj[c];
-    let valStr = 'NULL';
-    if (v !== null && v !== undefined && v !== '') {
-      valStr = typeof v === 'number' ? v : `'${String(v).replace(/'/g, "''")}'`;
+function switchActiveTab(tabId) {
+  state.activeTabId = tabId;
+  const tab = state.tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  if (tab.type === 'query') {
+    state.activeView = 'sql-query';
+  } else if (tab.type === 'table') {
+    state.activeTable = tab.tableName;
+    state.activeView = 'table-contents';
+  } else if (tab.type === 'designer') {
+    state.activeView = 'table-designer';
+    state.designer.editingTableName = tab.tableName;
+  } else if (tab.type === 'diagram') {
+    state.activeView = 'er-diagram';
+  }
+
+  renderTabs();
+  renderActiveView();
+  renderObjectExplorer();
+}
+
+function closeTab(e, tabId) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  state.tabs = state.tabs.filter(t => t.id !== tabId);
+
+  if (state.activeTabId === tabId) {
+    if (state.tabs.length > 0) {
+      const next = state.tabs[state.tabs.length - 1];
+      switchActiveTab(next.id);
+    } else {
+      state.activeTabId = null;
+      state.activeView = 'empty-workspace';
+      renderTabs();
+      renderActiveView();
     }
-    return `"${c}" = ${valStr}`;
-  }).join(", ");
-
-  let whereClause = "";
-  if (whereCol && whereVal !== undefined) {
-    const wVal = typeof whereVal === 'number' ? whereVal : `'${String(whereVal).replace(/'/g, "''")}'`;
-    whereClause = ` WHERE "${whereCol}" = ${wVal}`;
+  } else {
+    renderTabs();
   }
-  return `UPDATE "${tableName}" SET ${setClause}${whereClause};`;
 }
 
-/** Generate accurate DELETE DML SQL statement string */
-function generateDeleteSql(tableName, whereCol, whereVal) {
-  let whereClause = "";
-  if (whereCol && whereVal !== undefined) {
-    const wVal = typeof whereVal === 'number' ? whereVal : `'${String(whereVal).replace(/'/g, "''")}'`;
-    whereClause = ` WHERE "${whereCol}" = ${wVal}`;
+function renderTabs() {
+  const container = document.getElementById('tabItemsWrapper');
+  if (!container) return;
+  container.innerHTML = '';
+
+  state.tabs.forEach(tab => {
+    const isActive = tab.id === state.activeTabId;
+    const tabEl = document.createElement('div');
+    tabEl.className = `ssms-tab-item ${isActive ? 'active' : ''}`;
+    tabEl.onclick = () => switchActiveTab(tab.id);
+
+    tabEl.innerHTML = `
+      <i class="fa-solid ${tab.icon}"></i>
+      <span>${tab.name}</span>
+      <button class="ssms-tab-close" onclick="closeTab(event, '${tab.id}')" title="Close"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    container.appendChild(tabEl);
+  });
+}
+
+function renderActiveView() {
+  document.querySelectorAll('.ssms-view-page').forEach(v => v.classList.remove('active-view'));
+
+  if (state.activeView === 'empty-workspace') {
+    const view = document.getElementById('view-empty-workspace');
+    if (view) view.classList.add('active-view');
+  } else if (state.activeView === 'sql-query') {
+    const view = document.getElementById('view-sql-query');
+    if (view) view.classList.add('active-view');
+  } else if (state.activeView === 'table-contents') {
+    const view = document.getElementById('view-table-contents');
+    if (view) view.classList.add('active-view');
+    renderTableContents();
+  } else if (state.activeView === 'table-designer') {
+    const view = document.getElementById('view-table-designer');
+    if (view) view.classList.add('active-view');
+  } else if (state.activeView === 'er-diagram') {
+    const view = document.getElementById('view-er-diagram');
+    if (view) view.classList.add('active-view');
+    renderErDiagram();
   }
-  return `DELETE FROM "${tableName}"${whereClause};`;
 }
 
-/** Generate accurate DROP TABLE DDL SQL statement string */
-function generateDropTableSql(tableName) {
-  return `DROP TABLE "${tableName}";`;
+/** =========================================================================
+ * SSMS SQL QUERY CONSOLE & INTERPRETER
+ * ========================================================================= */
+
+function setupLineNumbers() {
+  const textarea = document.getElementById('consoleQueryInput');
+  const lineNumbers = document.getElementById('queryLineNumbers');
+  if (!textarea || !lineNumbers) return;
+
+  const update = () => {
+    const lines = (textarea.value || '').split('\n').length;
+    let numbersHtml = '';
+    for (let i = 1; i <= Math.max(lines, 1); i++) {
+      numbersHtml += `${i}<br>`;
+    }
+    lineNumbers.innerHTML = numbersHtml;
+  };
+
+  textarea.addEventListener('input', update);
+  textarea.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = textarea.scrollTop;
+  });
+  update();
 }
 
-/** 
- * ACCURATE SQL INTERPRETER & EXECUTION ENGINE 
- * Parses and executes single or multi-line SQL queries entered by the user.
- */
-function parseAndExecuteSql(rawSql) {
-  const cleanSql = rawSql.trim().replace(/;$/, '');
-  if (!cleanSql) return { success: false, error: 'Empty query statement.' };
+function runConsoleSqlQuery() {
+  const input = document.getElementById('consoleQueryInput');
+  const rawSql = input ? input.value.trim() : '';
 
-  const tokens = cleanSql.split(/\s+/);
-  const command = tokens[0].toUpperCase();
+  if (!rawSql) {
+    showToast('Enter a SQL query to execute', 'info');
+    return;
+  }
+
+  const startTime = performance.now();
+  const timer = document.getElementById('queryExecTimer');
+  if (timer) timer.innerText = 'Executing query...';
 
   try {
-    if (command === 'SELECT') {
-      return executeSelectQuery(cleanSql);
-    } else if (command === 'INSERT') {
-      return executeInsertQuery(cleanSql);
-    } else if (command === 'UPDATE') {
-      return executeUpdateQuery(cleanSql);
-    } else if (command === 'DELETE') {
-      return executeDeleteQuery(cleanSql);
-    } else if (command === 'CREATE') {
-      return executeCreateTableQuery(cleanSql);
-    } else if (command === 'DROP') {
-      return executeDropTableQuery(cleanSql);
-    } else {
-      return { success: false, error: `Unsupported SQL command: "${command}". Supported: SELECT, INSERT, UPDATE, DELETE, CREATE TABLE, DROP TABLE.` };
+    const result = interpretSqlQuery(rawSql);
+    const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+
+    if (timer) timer.innerText = `Query executed in ${duration}s`;
+    recordQueryHistory(rawSql, true);
+
+    const msgBox = document.getElementById('consoleQueryMessages');
+    if (msgBox) {
+      msgBox.innerText = `(${result.rowCount || 0} row(s) affected)\nQuery executed successfully.\nExecution time: 00:00:${duration}`;
     }
+
+    if (result.type === 'SELECT') {
+      renderQueryResultsGrid(result.columns, result.rows);
+      switchOutputTab('results');
+    } else {
+      switchOutputTab('messages');
+      renderObjectExplorer();
+      populateToolbarDbSelect();
+      if (state.activeTable && state.tables[state.activeTable]) {
+        renderTableContents();
+      }
+    }
+    showToast('Query executed successfully.', 'success');
   } catch (err) {
-    return { success: false, error: `SQL Syntax / Runtime Error: ${err.message}` };
+    const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+    if (timer) timer.innerText = `Failed (${duration}s)`;
+    recordQueryHistory(rawSql, false);
+
+    const msgBox = document.getElementById('consoleQueryMessages');
+    if (msgBox) {
+      msgBox.innerText = `Msg 102, Level 15, State 1:\n${err.message}`;
+    }
+    switchOutputTab('messages');
+    showToast(`SQL Error: ${err.message}`, 'danger');
   }
 }
 
-/** Execute SELECT statement */
-function executeSelectQuery(sql) {
-  const match = sql.match(/SELECT\s+(.+?)\s+FROM\s+(["`\w]+)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(\w+)(?:\s+(ASC|DESC))?)?(?:\s+LIMIT\s+(\d+))?$/i);
-  let selectedColsStr, tableName, whereClause = null, orderCol = null, orderDir = 'ASC', limitVal = null;
+function cancelExecutingQuery() {
+  const timer = document.getElementById('queryExecTimer');
+  if (timer) timer.innerText = 'Canceled by user.';
+  showToast('Query execution canceled.', 'info');
+}
 
-  if (!match) {
-    const simpleMatch = sql.match(/SELECT\s+(.+?)\s+FROM\s+(["`\w]+)/i);
-    if (!simpleMatch) throw new Error('Invalid SELECT syntax. Usage: SELECT * FROM TableName WHERE col = val;');
-    selectedColsStr = simpleMatch[1].trim();
-    tableName = simpleMatch[2].replace(/["`]/g, '').trim();
+function clearConsoleQuery() {
+  const input = document.getElementById('consoleQueryInput');
+  if (input) {
+    input.value = '';
+    setupLineNumbers();
+  }
+}
+
+function switchOutputTab(tabType) {
+  const btnRes = document.getElementById('tabOutputResults');
+  const btnMsg = document.getElementById('tabOutputMessages');
+  const paneRes = document.getElementById('outputPaneResults');
+  const paneMsg = document.getElementById('outputPaneMessages');
+
+  if (tabType === 'results') {
+    if (btnRes) btnRes.classList.add('active');
+    if (btnMsg) btnMsg.classList.remove('active');
+    if (paneRes) paneRes.classList.add('active');
+    if (paneMsg) paneMsg.classList.remove('active');
   } else {
-    selectedColsStr = match[1].trim();
-    tableName = match[2].replace(/["`]/g, '').trim();
-    whereClause = match[3] ? match[3].trim() : null;
-    orderCol = match[4] ? match[4].trim() : null;
-    orderDir = match[5] ? match[5].toUpperCase() : 'ASC';
-    limitVal = match[6] ? parseInt(match[6], 10) : null;
+    if (btnRes) btnRes.classList.remove('active');
+    if (btnMsg) btnMsg.classList.add('active');
+    if (paneRes) paneRes.classList.remove('active');
+    if (paneMsg) paneMsg.classList.add('active');
+  }
+}
+
+function renderQueryResultsGrid(columns, rows) {
+  const container = document.getElementById('consoleQueryResults');
+  if (!container) return;
+
+  if (!columns || columns.length === 0) {
+    container.innerHTML = '<div class="p-3 text-muted">Query executed successfully. (0 columns returned)</div>';
+    return;
   }
 
-  if (!state.tables[tableName]) {
-    throw new Error(`Table "${tableName}" does not exist in active database.`);
-  }
+  let tableHtml = `<table class="grid-table"><thead><tr><th style="width:40px; text-align:center;">#</th>`;
+  columns.forEach(c => tableHtml += `<th>${escapeHtml(c)}</th>`);
+  tableHtml += `</tr></thead><tbody>`;
 
-  const table = state.tables[tableName];
-  let rows = [...table.rows];
-
-  if (whereClause) {
-    rows = applyWhereCondition(rows, whereClause);
-  }
-
-  if (orderCol) {
-    rows.sort((a, b) => {
-      const valA = a[orderCol], valB = b[orderCol];
-      if (valA < valB) return orderDir === 'ASC' ? -1 : 1;
-      if (valA > valB) return orderDir === 'ASC' ? 1 : -1;
-      return 0;
+  if (rows.length === 0) {
+    tableHtml += `<tr><td colspan="${columns.length + 1}" class="p-3 text-muted text-center">0 rows returned.</td></tr>`;
+  } else {
+    rows.forEach((r, idx) => {
+      tableHtml += `<tr><td style="text-align:center; color:var(--text-muted);">${idx + 1}</td>`;
+      columns.forEach(c => {
+        tableHtml += `<td>${escapeHtml(r[c] !== undefined ? r[c] : 'NULL')}</td>`;
+      });
+      tableHtml += `</tr>`;
     });
   }
-
-  if (limitVal !== null && limitVal > 0) {
-    rows = rows.slice(0, limitVal);
-  }
-
-  let columns = table.columns;
-  if (selectedColsStr !== '*') {
-    const colNames = selectedColsStr.split(',').map(c => c.replace(/["`]/g, '').trim());
-    columns = table.columns.filter(c => colNames.includes(c.name));
-  }
-
-  return {
-    success: true,
-    type: 'SELECT',
-    tableName: tableName,
-    columns: columns,
-    rows: rows,
-    rowCount: rows.length,
-    message: `Query returned ${rows.length} record(s) from table "${tableName}".`
-  };
+  tableHtml += `</tbody></table>`;
+  container.innerHTML = tableHtml;
 }
 
-/** Execute WHERE Clause Condition */
-function applyWhereCondition(rows, whereClause) {
-  const opMatch = whereClause.match(/(["`\w]+)\s*(=|!=|<>|>|<|>=|<=|LIKE)\s*(.+)/i);
-  if (!opMatch) return rows;
+function interpretSqlQuery(sql) {
+  const clean = sql.replace(/--.*$/gm, '').trim();
+  const firstWord = clean.split(/\s+/)[0].toUpperCase();
 
-  const field = opMatch[1].replace(/["`]/g, '').trim();
-  const op = opMatch[2].toUpperCase();
-  let rawVal = opMatch[3].trim().replace(/^['"]|['"]$/g, '');
+  if (firstWord === 'SELECT') return executeSelectQuery(clean);
+  if (firstWord === 'INSERT') return executeInsertQuery(clean);
+  if (firstWord === 'UPDATE') return executeUpdateQuery(clean);
+  if (firstWord === 'DELETE') return executeDeleteQuery(clean);
+  if (firstWord === 'CREATE') return executeCreateQuery(clean);
+  if (firstWord === 'DROP') return executeDropQuery(clean);
+  if (firstWord === 'ALTER') return executeAlterQuery(clean);
 
-  return rows.filter(row => {
-    const cellVal = row[field];
-    if (cellVal === undefined) return false;
-
-    let targetVal = rawVal;
-    if (typeof cellVal === 'number') {
-      targetVal = Number(rawVal);
-    }
-
-    switch (op) {
-      case '=': return cellVal == targetVal;
-      case '!=':
-      case '<>': return cellVal != targetVal;
-      case '>': return cellVal > targetVal;
-      case '<': return cellVal < targetVal;
-      case '>=': return cellVal >= targetVal;
-      case '<=': return cellVal <= targetVal;
-      case 'LIKE': 
-        const pattern = String(rawVal).replace(/%/g, '.*');
-        return new RegExp('^' + pattern + '$', 'i').test(String(cellVal));
-      default: return true;
-    }
-  });
+  throw new Error(`Unsupported SQL command "${firstWord}". Supported: SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER.`);
 }
 
-/** Execute INSERT INTO statement */
+function executeSelectQuery(sql) {
+  const match = sql.match(/SELECT\s+(?:TOP\s+(\d+)\s+)?([\s\S]+?)\s+FROM\s+(?:\[dbo\]\.)?\[?([a-zA-Z0-9_]+)\]?(?:\s+WHERE\s+([\s\S]+?))?(?:\s+ORDER\s+BY\s+([\s\S]+?))?$/i);
+  if (!match) throw new Error("Invalid SELECT syntax. Example: SELECT * FROM Users; or SELECT TOP 10 * FROM Users;");
+
+  const topLimit = match[1] ? parseInt(match[1], 10) : null;
+  const colClause = match[2].trim();
+  const tableName = match[3].replace(/[\[\]]/g, '').trim();
+  const whereClause = match[4] ? match[4].trim() : null;
+
+  if (!state.tables[tableName]) throw new Error(`Table "dbo.${tableName}" does not exist in ${state.dbName}.`);
+
+  const tableData = state.tables[tableName];
+  let resultRows = [...tableData.rows];
+
+  if (whereClause) {
+    resultRows = resultRows.filter(row => evaluateWhereCondition(row, whereClause));
+  }
+
+  if (topLimit !== null) {
+    resultRows = resultRows.slice(0, topLimit);
+  }
+
+  let finalColumns = [];
+  if (colClause === '*') {
+    finalColumns = tableData.columns.map(c => c.name);
+  } else {
+    finalColumns = colClause.split(',').map(c => c.trim().replace(/[\[\]]/g, ''));
+  }
+
+  return { type: 'SELECT', columns: finalColumns, rows: resultRows, rowCount: resultRows.length };
+}
+
+function evaluateWhereCondition(row, condition) {
+  try {
+    const eqMatch = condition.match(/\[?(\w+)\]?\s*=\s*(?:'([^']*)'|(\d+))/);
+    if (eqMatch) {
+      const col = eqMatch[1];
+      const val = eqMatch[2] !== undefined ? eqMatch[2] : Number(eqMatch[3]);
+      return String(row[col]) === String(val);
+    }
+    return true;
+  } catch (e) {
+    return true;
+  }
+}
+
 function executeInsertQuery(sql) {
-  const match = sql.match(/INSERT\s+INTO\s+(["`\w]+)\s*\((.+?)\)\s*VALUES\s*\((.+?)\)$/i);
-  if (!match) {
-    throw new Error("Invalid INSERT syntax. Usage: INSERT INTO TableName (col1, col2) VALUES ('val1', 'val2');");
-  }
+  const match = sql.match(/INSERT\s+INTO\s+(?:\[dbo\]\.)?\[?(\w+)\]?\s*\((.+?)\)\s*VALUES\s*\((.+?)\)/i);
+  if (!match) throw new Error("Invalid INSERT syntax. Example: INSERT INTO Users (name, email) VALUES ('Alex', 'alex@mail.com');");
 
-  const tableName = match[1].replace(/["`]/g, '').trim();
-  if (!state.tables[tableName]) {
-    throw new Error(`Table "${tableName}" does not exist.`);
-  }
+  const tableName = match[1];
+  if (!state.tables[tableName]) throw new Error(`Table "dbo.${tableName}" does not exist.`);
 
-  const cols = match[2].split(',').map(c => c.replace(/["`]/g, '').trim());
-  const vals = match[3].split(',').map(v => {
-    let val = v.trim().replace(/^['"]|['"]$/g, '');
-    if (!isNaN(val) && val !== '') val = Number(val);
-    return val;
-  });
-
-  if (cols.length !== vals.length) {
-    throw new Error("Number of columns does not match number of values.");
-  }
+  const cols = match[2].split(',').map(c => c.trim().replace(/[\[\]]/g, ''));
+  const vals = match[3].split(',').map(v => v.trim().replace(/^'|'$/g, ''));
 
   const newRow = {};
+  state.tables[tableName].columns.forEach(c => newRow[c.name] = c.def || '');
   cols.forEach((col, idx) => {
-    newRow[col] = vals[idx];
+    newRow[col] = vals[idx] !== undefined ? vals[idx] : '';
   });
 
   state.tables[tableName].rows.push(newRow);
   saveDatabaseToStorage();
-
-  if (state.activeTable === tableName) {
-    renderTableContents();
-  }
-
-  return {
-    success: true,
-    type: 'DML',
-    tableName: tableName,
-    affectedRows: 1,
-    message: `1 row inserted into "${tableName}".`
-  };
+  return { type: 'INSERT', rowCount: 1 };
 }
 
-/** Execute UPDATE statement */
 function executeUpdateQuery(sql) {
-  const match = sql.match(/UPDATE\s+(["`\w]+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+?))?$/i);
-  if (!match) {
-    throw new Error("Invalid UPDATE syntax. Usage: UPDATE TableName SET col1 = 'val1' WHERE id = 1;");
-  }
+  const match = sql.match(/UPDATE\s+(?:\[dbo\]\.)?\[?(\w+)\]?\s+SET\s+(.+?)(?:\s+WHERE\s+(.+?))?$/i);
+  if (!match) throw new Error("Invalid UPDATE syntax. Example: UPDATE Users SET role = 'Admin' WHERE id = 1;");
 
-  const tableName = match[1].replace(/["`]/g, '').trim();
-  if (!state.tables[tableName]) {
-    throw new Error(`Table "${tableName}" does not exist.`);
-  }
+  const tableName = match[1];
+  if (!state.tables[tableName]) throw new Error(`Table "dbo.${tableName}" does not exist.`);
 
-  const setStr = match[2].trim();
+  const setStr = match[2];
   const whereClause = match[3] ? match[3].trim() : null;
 
-  const setPairs = setStr.split(',').map(p => {
-    const parts = p.split('=');
-    const key = parts[0].replace(/["`]/g, '').trim();
-    let val = parts[1].trim().replace(/^['"]|['"]$/g, '');
-    if (!isNaN(val) && val !== '') val = Number(val);
-    return { key, val };
+  const sets = {};
+  setStr.split(',').forEach(s => {
+    const p = s.split('=');
+    if (p.length === 2) sets[p[0].trim().replace(/[\[\]]/g, '')] = p[1].trim().replace(/^'|'$/g, '');
   });
 
-  const table = state.tables[tableName];
-  let updatedCount = 0;
-
-  table.rows.forEach(row => {
-    let shouldUpdate = true;
-    if (whereClause) {
-      const filtered = applyWhereCondition([row], whereClause);
-      if (filtered.length === 0) shouldUpdate = false;
-    }
-
-    if (shouldUpdate) {
-      setPairs.forEach(pair => {
-        row[pair.key] = pair.val;
-      });
-      updatedCount++;
+  let count = 0;
+  state.tables[tableName].rows.forEach(row => {
+    if (!whereClause || evaluateWhereCondition(row, whereClause)) {
+      Object.assign(row, sets);
+      count++;
     }
   });
 
   saveDatabaseToStorage();
-  if (state.activeTable === tableName) {
-    renderTableContents();
-  }
-
-  return {
-    success: true,
-    type: 'DML',
-    tableName: tableName,
-    affectedRows: updatedCount,
-    message: `${updatedCount} row(s) updated in "${tableName}".`
-  };
+  return { type: 'UPDATE', rowCount: count };
 }
 
-/** Execute DELETE statement */
 function executeDeleteQuery(sql) {
-  const match = sql.match(/DELETE\s+FROM\s+(["`\w]+)(?:\s+WHERE\s+(.+?))?$/i);
-  if (!match) {
-    throw new Error("Invalid DELETE syntax. Usage: DELETE FROM TableName WHERE id = 1;");
-  }
+  const match = sql.match(/DELETE\s+FROM\s+(?:\[dbo\]\.)?\[?(\w+)\]?(?:\s+WHERE\s+(.+?))?$/i);
+  if (!match) throw new Error("Invalid DELETE syntax. Example: DELETE FROM Users WHERE id = 2;");
 
-  const tableName = match[1].replace(/["`]/g, '').trim();
-  if (!state.tables[tableName]) {
-    throw new Error(`Table "${tableName}" does not exist.`);
-  }
+  const tableName = match[1];
+  if (!state.tables[tableName]) throw new Error(`Table "dbo.${tableName}" does not exist.`);
 
   const whereClause = match[2] ? match[2].trim() : null;
-  const table = state.tables[tableName];
-  const initialLength = table.rows.length;
+  const initial = state.tables[tableName].rows.length;
 
   if (whereClause) {
-    table.rows = table.rows.filter(row => {
-      const matchRows = applyWhereCondition([row], whereClause);
-      return matchRows.length === 0;
-    });
+    state.tables[tableName].rows = state.tables[tableName].rows.filter(r => !evaluateWhereCondition(r, whereClause));
   } else {
-    table.rows = [];
+    state.tables[tableName].rows = [];
   }
 
-  const deletedCount = initialLength - table.rows.length;
-
+  const affected = initial - state.tables[tableName].rows.length;
   saveDatabaseToStorage();
-  if (state.activeTable === tableName) {
-    renderTableContents();
-  }
-
-  return {
-    success: true,
-    type: 'DML',
-    tableName: tableName,
-    affectedRows: deletedCount,
-    message: `${deletedCount} row(s) deleted from "${tableName}".`
-  };
+  return { type: 'DELETE', rowCount: affected };
 }
 
-/** Execute CREATE TABLE statement */
-function executeCreateTableQuery(sql) {
-  const match = sql.match(/CREATE\s+TABLE\s+(["`\w]+)\s*\((.+?)\)$/i);
-  if (!match) {
-    throw new Error("Invalid CREATE TABLE syntax. Usage: CREATE TABLE TableName (id INTEGER PRIMARY KEY, name TEXT);");
-  }
+function executeCreateQuery(sql) {
+  const match = sql.match(/CREATE\s+TABLE\s+(?:\[dbo\]\.)?\[?(\w+)\]?\s*\((.+?)\)/i);
+  if (!match) throw new Error("Invalid CREATE TABLE syntax. Usage: CREATE TABLE TableName (id int primary key, name varchar(50) not null);");
 
-  const tableName = match[1].replace(/["`]/g, '').trim();
-  const colDefsStr = match[2].trim();
+  const tableName = match[1];
+  const colDefsStr = match[2];
 
-  const columns = colDefsStr.split(',').map(def => {
+  const cols = colDefsStr.split(',').map(def => {
     const parts = def.trim().split(/\s+/);
-    const name = parts[0].replace(/["`]/g, '');
+    const name = parts[0].replace(/[\[\]]/g, '');
     const type = (parts[1] || 'TEXT').toUpperCase();
     const pk = def.toUpperCase().includes('PRIMARY KEY');
     const nn = def.toUpperCase().includes('NOT NULL');
-    return { name, type, pk, nn };
+    return { name, type, pk, nn, uq: pk, def: '' };
   });
 
-  state.tables[tableName] = {
-    columns: columns,
-    rows: []
-  };
-
+  state.tables[tableName] = { columns: cols, foreignKeys: [], rows: [] };
   saveDatabaseToStorage();
-  openTableTab(tableName);
-  renderSidebar();
-
-  return {
-    success: true,
-    type: 'DDL',
-    tableName: tableName,
-    message: `Table "${tableName}" created successfully.`
-  };
+  return { type: 'CREATE', rowCount: 0 };
 }
 
-/** Execute DROP TABLE statement */
-function executeDropTableQuery(sql) {
-  const match = sql.match(/DROP\s+TABLE\s+(["`\w]+)$/i);
-  if (!match) {
-    throw new Error("Invalid DROP TABLE syntax. Usage: DROP TABLE TableName;");
-  }
+function executeDropQuery(sql) {
+  const match = sql.match(/DROP\s+TABLE\s+(?:\[dbo\]\.)?\[?(\w+)\]?/i);
+  if (!match) throw new Error("Invalid DROP TABLE syntax. Usage: DROP TABLE TableName;");
 
-  const tableName = match[1].replace(/["`]/g, '').trim();
-  if (!state.tables[tableName]) {
-    throw new Error(`Table "${tableName}" does not exist.`);
-  }
+  const tableName = match[1];
+  if (!state.tables[tableName]) throw new Error(`Table "${tableName}" does not exist.`);
 
-  delete state.tables[tableName];
-  closeTab(new Event('click'), `table:${tableName}`);
-  state.activeTable = Object.keys(state.tables)[0] || null;
-
-  saveDatabaseToStorage();
-  renderSidebar();
-  renderTabs();
-  renderActiveView();
-
-  return {
-    success: true,
-    type: 'DDL',
-    tableName: tableName,
-    message: `Table "${tableName}" dropped successfully.`
-  };
+  deleteTableByName(tableName);
+  return { type: 'DROP', rowCount: 0 };
 }
 
-/** CONSOLE SQL RUNNER INTERFACE */
-function runConsoleSqlQuery() {
-  const input = document.getElementById('consoleQueryInput').value.trim();
-  const resultsContainer = document.getElementById('consoleQueryResults');
-  if (!input) return;
+function executeAlterQuery(sql) {
+  const match = sql.match(/ALTER\s+TABLE\s+(?:\[dbo\]\.)?\[?(\w+)\]?\s+ADD\s+(?:COLUMN\s+)?(\w+)\s+(\w+)/i);
+  if (!match) throw new Error("Invalid ALTER TABLE syntax. Usage: ALTER TABLE TableName ADD COLUMN colName int;");
 
-  const statements = input.split(';').map(s => s.trim()).filter(s => s.length > 0);
-  resultsContainer.innerHTML = '';
+  const tableName = match[1];
+  const colName = match[2];
+  const colType = match[3].toUpperCase();
 
-  statements.forEach(stmt => {
-    const time = new Date().toLocaleTimeString();
-    const logHeader = `<div class="log-line info" style="margin-bottom: 4px; font-weight: 600;">[${time}] &gt; ${escapeHtml(stmt)};</div>`;
+  if (!state.tables[tableName]) throw new Error(`Table "${tableName}" does not exist.`);
+  state.tables[tableName].columns.push({ name: colName, type: colType, pk: false, nn: false, uq: false, def: '' });
+  saveDatabaseToStorage();
+  return { type: 'ALTER', rowCount: 0 };
+}
 
-    const res = parseAndExecuteSql(stmt);
-    if (!res.success) {
-      resultsContainer.innerHTML += `${logHeader}<div class="text-danger mb-3" style="padding-left: 10px;"><i class="fa-solid fa-circle-xmark"></i> ${escapeHtml(res.error)}</div>`;
-    } else {
-      let content = `<div class="text-success mb-2" style="padding-left: 10px;"><i class="fa-solid fa-circle-check"></i> ${escapeHtml(res.message)}</div>`;
+function recordQueryHistory(sql, success) {
+  state.queryHistory.unshift({
+    sql: sql,
+    time: new Date().toLocaleTimeString(),
+    success: success
+  });
+  if (state.queryHistory.length > 50) state.queryHistory.pop();
+  try {
+    localStorage.setItem('studio_sql_history', JSON.stringify(state.queryHistory));
+  } catch (e) {}
+  renderQueryHistory();
+}
 
-      if (res.type === 'SELECT' && res.columns && res.rows) {
-        let tableHtml = '<div class="data-grid-container mb-3" style="max-height: 300px;"><table class="grid-table"><thead><tr>';
-        res.columns.forEach(c => tableHtml += `<th>${c.name} <small class="text-muted">(${c.type})</small></th>`);
-        tableHtml += '</tr></thead><tbody>';
+function loadQueryHistory() {
+  try {
+    const saved = localStorage.getItem('studio_sql_history');
+    if (saved) state.queryHistory = JSON.parse(saved);
+  } catch (e) {}
+}
 
-        if (res.rows.length === 0) {
-          tableHtml += `<tr><td colspan="${res.columns.length}" class="placeholder-text p-2">0 rows returned.</td></tr>`;
-        } else {
-          res.rows.forEach(r => {
-            tableHtml += '<tr>';
-            res.columns.forEach(c => tableHtml += `<td>${r[c.name] !== undefined ? r[c.name] : ''}</td>`);
-            tableHtml += '</tr>';
-          });
-        }
-        tableHtml += '</tbody></table></div>';
-        content += tableHtml;
+function renderQueryHistory() {
+  const container = document.getElementById('queryHistoryList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  state.queryHistory.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    el.onclick = () => {
+      const input = document.getElementById('consoleQueryInput');
+      if (input) {
+        input.value = item.sql;
+        setupLineNumbers();
       }
-      resultsContainer.innerHTML += `${logHeader}${content}`;
+    };
+    el.innerHTML = `
+      <div class="history-query">${escapeHtml(item.sql)}</div>
+      <div class="history-time"><i class="fa-solid ${item.success ? 'fa-check text-success' : 'fa-xmark text-danger'}"></i> ${item.time}</div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function toggleQueryHistoryPanel() {
+  const panel = document.getElementById('queryHistorySidebar');
+  if (panel) panel.classList.toggle('hidden');
+}
+
+function clearQueryHistory() {
+  state.queryHistory = [];
+  try { localStorage.removeItem('studio_sql_history'); } catch (e) {}
+  renderQueryHistory();
+}
+
+function exportQueryResultsCsv() {
+  const container = document.getElementById('consoleQueryResults');
+  const table = container ? container.querySelector('table') : null;
+  if (!table) {
+    showToast('No query results to export.', 'info');
+    return;
+  }
+  let csv = '';
+  table.querySelectorAll('tr').forEach(row => {
+    const rowData = [];
+    row.querySelectorAll('th, td').forEach(cell => rowData.push(`"${cell.innerText.replace(/"/g, '""')}"`));
+    csv += rowData.join(',') + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `QueryResults_${Date.now()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/** =========================================================================
+ * SSMS RELATIONAL DATABASE DIAGRAMS
+ * ========================================================================= */
+
+function renderErDiagram() {
+  const tablesContainer = document.getElementById('diagramTablesContainer');
+  const statsLabel = document.getElementById('diagramStats');
+  if (!tablesContainer) return;
+
+  tablesContainer.innerHTML = '';
+  const tableKeys = Object.keys(state.tables);
+
+  let totalRelationships = 0;
+  tableKeys.forEach(tName => {
+    totalRelationships += (state.tables[tName].foreignKeys || []).length;
+  });
+
+  if (statsLabel) {
+    statsLabel.innerText = `${tableKeys.length} Tables, ${totalRelationships} Relationship${totalRelationships === 1 ? '' : 's'}`;
+  }
+
+  let defaultX = 50, defaultY = 50;
+  tableKeys.forEach((tName, idx) => {
+    if (!state.diagram.tablePositions[tName]) {
+      state.diagram.tablePositions[tName] = {
+        x: defaultX + (idx % 3) * 280,
+        y: defaultY + Math.floor(idx / 3) * 260
+      };
+    }
+  });
+
+  tableKeys.forEach(tName => {
+    const tableData = state.tables[tName];
+    const pos = state.diagram.tablePositions[tName];
+
+    const card = document.createElement('div');
+    card.id = `diagram-card-${tName}`;
+    card.className = 'diagram-table-card';
+    card.style.left = `${pos.x}px`;
+    card.style.top = `${pos.y}px`;
+
+    let columnsHtml = '';
+    (tableData.columns || []).forEach(col => {
+      const isFk = (tableData.foreignKeys || []).some(fk => fk.column === col.name);
+      columnsHtml += `
+        <div class="card-col-row" id="col-row-${tName}-${col.name}">
+          <div class="flex-center gap-1">
+            ${col.pk ? '<i class="fa-solid fa-key badge-pk"></i>' : ''}
+            ${isFk ? '<i class="fa-solid fa-link badge-fk"></i>' : ''}
+            <span>${col.name}</span>
+          </div>
+          <span class="card-col-type">${col.type}</span>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="flex-center gap-1">
+          <i class="fa-solid fa-table text-accent"></i>
+          <span>dbo.${tName}</span>
+        </div>
+        <div class="flex-center gap-1">
+          <button class="btn-icon-xs" title="Edit Top 200 Rows" onclick="event.stopPropagation(); openTableDataTab('${tName}')"><i class="fa-solid fa-table"></i></button>
+          <button class="btn-icon-xs" title="Design Table" onclick="event.stopPropagation(); openTableDesignerForTable('${tName}')"><i class="fa-solid fa-table-columns"></i></button>
+          <button class="btn-icon-xs text-danger" title="Delete Table" onclick="event.stopPropagation(); promptDeleteTable('${tName}')"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </div>
+      <div class="card-columns">
+        ${columnsHtml}
+      </div>
+    `;
+
+    card.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) return;
+      state.diagram.draggingTable = tName;
+      state.diagram.dragStart.x = e.clientX;
+      state.diagram.dragStart.y = e.clientY;
+    });
+
+    tablesContainer.appendChild(card);
+  });
+
+  setTimeout(() => redrawDiagramConnectors(), 20);
+}
+
+function redrawDiagramConnectors() {
+  const svg = document.getElementById('diagramSvgLayer');
+  if (!svg) return;
+  svg.innerHTML = '';
+
+  const tableKeys = Object.keys(state.tables);
+  tableKeys.forEach(sourceTableName => {
+    const sourceTable = state.tables[sourceTableName];
+    (sourceTable.foreignKeys || []).forEach(fk => {
+      const targetTableName = fk.refTable;
+      const targetTable = state.tables[targetTableName];
+      if (!targetTable) return;
+
+      const sourceCard = document.getElementById(`diagram-card-${sourceTableName}`);
+      const targetCard = document.getElementById(`diagram-card-${targetTableName}`);
+      if (!sourceCard || !targetCard) return;
+
+      const sX = parseInt(sourceCard.style.left, 10) + sourceCard.offsetWidth;
+      const sY = parseInt(sourceCard.style.top, 10) + 40;
+      const tX = parseInt(targetCard.style.left, 10);
+      const tY = parseInt(targetCard.style.top, 10) + 40;
+
+      const dx = Math.abs(tX - sX) * 0.5;
+      const pathData = `M ${sX} ${sY} C ${sX + dx} ${sY}, ${tX - dx} ${tY}, ${tX} ${tY}`;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData);
+      path.setAttribute('stroke', '#38bdf8');
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-dasharray', '4 2');
+      svg.appendChild(path);
+    });
+  });
+}
+
+function autoArrangeDiagramTables() {
+  const tableKeys = Object.keys(state.tables);
+  tableKeys.forEach((tName, idx) => {
+    state.diagram.tablePositions[tName] = {
+      x: 60 + (idx % 3) * 280,
+      y: 60 + Math.floor(idx / 3) * 260
+    };
+  });
+  renderErDiagram();
+}
+
+function zoomDiagram(delta) {
+  state.diagram.zoom = Math.max(0.4, Math.min(2.0, state.diagram.zoom + delta));
+  const canvas = document.getElementById('diagramCanvas');
+  if (canvas) canvas.style.transform = `scale(${state.diagram.zoom})`;
+}
+
+function resetDiagramZoom() {
+  state.diagram.zoom = 1;
+  const canvas = document.getElementById('diagramCanvas');
+  if (canvas) canvas.style.transform = 'scale(1)';
+}
+
+function exportDiagramSvg() {
+  const svg = document.getElementById('diagramSvgLayer');
+  if (!svg) return;
+  const data = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Database_Diagram_${getCleanDbName()}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/** =========================================================================
+ * FOREIGN KEY RELATIONSHIP WIZARD
+ * ========================================================================= */
+
+function openAddRelationshipModal(presetSourceTable = null) {
+  closeAllMenus();
+  const sSelect = document.getElementById('fkSourceTable');
+  const tSelect = document.getElementById('fkTargetTable');
+  if (!sSelect || !tSelect) return;
+
+  sSelect.innerHTML = '';
+  tSelect.innerHTML = '';
+
+  const tableKeys = Object.keys(state.tables);
+  const sourceTable = presetSourceTable || state.activeTable || tableKeys[0];
+
+  tableKeys.forEach(t => {
+    sSelect.innerHTML += `<option value="${t}" ${t === sourceTable ? 'selected' : ''}>${t}</option>`;
+    tSelect.innerHTML += `<option value="${t}" ${t !== sourceTable ? 'selected' : ''}>${t}</option>`;
+  });
+
+  updateFkSourceColumns();
+  updateFkTargetColumns();
+  openModal('addRelationshipModal');
+}
+
+function updateFkSourceColumns() {
+  const sTable = document.getElementById('fkSourceTable').value;
+  const colSelect = document.getElementById('fkSourceCol');
+  if (!colSelect) return;
+  colSelect.innerHTML = '';
+
+  if (state.tables[sTable]) {
+    state.tables[sTable].columns.forEach(col => {
+      colSelect.innerHTML += `<option value="${col.name}">${col.name} (${col.type})</option>`;
+    });
+  }
+}
+
+function updateFkTargetColumns() {
+  const tTable = document.getElementById('fkTargetTable').value;
+  const colSelect = document.getElementById('fkTargetCol');
+  if (!colSelect) return;
+  colSelect.innerHTML = '';
+
+  if (state.tables[tTable]) {
+    state.tables[tTable].columns.forEach(col => {
+      colSelect.innerHTML += `<option value="${col.name}" ${col.pk ? 'selected' : ''}>${col.name} (${col.type}) ${col.pk ? '★ PK' : ''}</option>`;
+    });
+  }
+}
+
+function handleAddRelationshipSubmit(e) {
+  e.preventDefault();
+  const sTable = document.getElementById('fkSourceTable').value;
+  const sCol = document.getElementById('fkSourceCol').value;
+  const tTable = document.getElementById('fkTargetTable').value;
+  const tCol = document.getElementById('fkTargetCol').value;
+  const onDelete = document.getElementById('fkOnDelete').value;
+
+  if (sTable === tTable && sCol === tCol) {
+    showToast('Cannot connect a column to itself.', 'danger');
+    return;
+  }
+
+  if (!state.tables[sTable].foreignKeys) state.tables[sTable].foreignKeys = [];
+  state.tables[sTable].foreignKeys = state.tables[sTable].foreignKeys.filter(fk => fk.column !== sCol);
+  state.tables[sTable].foreignKeys.push({ column: sCol, refTable: tTable, refColumn: tCol, onDelete: onDelete });
+
+  saveDatabaseToStorage();
+  closeModal('addRelationshipModal');
+  renderObjectExplorer();
+  renderErDiagram();
+  if (state.activeView === 'table-contents') renderTableContents();
+  showToast(`Enforced Foreign Key: ${sTable}.${sCol} &rarr; ${tTable}.${tCol}`, 'success');
+}
+
+/** =========================================================================
+ * NEW DATABASE & RESTORE / PROPERTIES
+ * ========================================================================= */
+
+function openInitialSetupModal() {
+  closeAllMenus();
+  openModal('initialSetupModal');
+}
+
+function handleInitialSetupSubmit(e) {
+  e.preventDefault();
+  const nameInput = document.getElementById('promptDbName');
+  let name = nameInput.value.trim() || 'MyDatabase';
+  if (!name.endsWith('.sqlite')) name += '.sqlite';
+
+  state.dbName = name;
+  const scaffold = document.getElementById('scaffoldSampleTables').checked;
+
+  if (!scaffold) {
+    state.tables = {};
+    state.activeTable = null;
+    state.diagram.tablePositions = {};
+  } else {
+    state.tables = {
+      'Users': {
+        columns: [
+          { name: 'id', type: 'INTEGER', pk: true, nn: true, uq: true, def: '' },
+          { name: 'name', type: 'TEXT', pk: false, nn: true, uq: false, def: '' },
+          { name: 'email', type: 'TEXT', pk: false, nn: true, uq: true, def: '' },
+          { name: 'role', type: 'TEXT', pk: false, nn: false, uq: false, def: 'User' },
+          { name: 'created_at', type: 'TEXT', pk: false, nn: false, uq: false, def: '2026-01-01' }
+        ],
+        foreignKeys: [],
+        rows: [
+          { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin', created_at: '2026-01-10' },
+          { id: 2, name: 'Maria Garcia', email: 'maria@tech.org', role: 'Developer', created_at: '2026-01-15' }
+        ]
+      },
+      'Orders': {
+        columns: [
+          { name: 'id', type: 'INTEGER', pk: true, nn: true, uq: true, def: '' },
+          { name: 'user_id', type: 'INTEGER', pk: false, nn: true, uq: false, def: '' },
+          { name: 'amount', type: 'REAL', pk: false, nn: true, uq: false, def: '0.00' },
+          { name: 'status', type: 'TEXT', pk: false, nn: false, uq: false, def: 'Pending' }
+        ],
+        foreignKeys: [
+          { column: 'user_id', refTable: 'Users', refColumn: 'id', onDelete: 'CASCADE' }
+        ],
+        rows: [
+          { id: 101, user_id: 1, amount: 149.99, status: 'Completed' }
+        ]
+      }
+    };
+    state.activeTable = 'Users';
+    state.diagram.tablePositions = {};
+  }
+
+  saveDatabaseToStorage();
+  closeModal('initialSetupModal');
+  updateConnectionUI();
+  populateToolbarDbSelect();
+  renderObjectExplorer();
+  openNewQueryTab();
+  showToast(`Database "${state.dbName}" initialized!`, 'success');
+}
+
+function openRenameDbModal() {
+  closeAllMenus();
+  const input = document.getElementById('renameDbInput');
+  if (input) input.value = getCleanDbName();
+  openModal('renameDbModal');
+}
+
+function handleRenameDbSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('renameDbInput');
+  let newName = input.value.trim() || 'MyDatabase';
+  if (!newName.endsWith('.sqlite')) newName += '.sqlite';
+
+  state.dbName = newName;
+  saveDatabaseToStorage();
+  closeModal('renameDbModal');
+  updateConnectionUI();
+  populateToolbarDbSelect();
+  renderObjectExplorer();
+  showToast(`Database renamed to "${newName}"`, 'success');
+}
+
+function openDbPropertiesModal() {
+  closeAllMenus();
+  const dbNameEl = document.getElementById('propDbNameVal');
+  const serverEl = document.getElementById('propServerHostVal');
+  const tableCountEl = document.getElementById('propTableCountVal');
+  const rowCountEl = document.getElementById('propRowCountVal');
+  const fkCountEl = document.getElementById('propFkCountVal');
+
+  const tableKeys = Object.keys(state.tables);
+  let totalRows = 0;
+  let totalFks = 0;
+  tableKeys.forEach(t => {
+    totalRows += (state.tables[t].rows || []).length;
+    totalFks += (state.tables[t].foreignKeys || []).length;
+  });
+
+  if (dbNameEl) dbNameEl.innerText = state.dbName;
+  if (serverEl) serverEl.innerText = state.connection.serverName;
+  if (tableCountEl) tableCountEl.innerText = tableKeys.length;
+  if (rowCountEl) rowCountEl.innerText = totalRows;
+  if (fkCountEl) fkCountEl.innerText = totalFks;
+
+  openModal('dbPropertiesModal');
+}
+
+function openImportDbModal() {
+  closeAllMenus();
+  openModal('importDbModal');
+}
+
+function handleImportFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const data = JSON.parse(event.target.result);
+      if (data.tables) {
+        state.tables = data.tables;
+        if (data.dbName) state.dbName = data.dbName;
+        saveDatabaseToStorage();
+        closeModal('importDbModal');
+        updateConnectionUI();
+        populateToolbarDbSelect();
+        renderObjectExplorer();
+        renderTabs();
+        renderActiveView();
+        showToast('Database backup successfully restored!', 'success');
+      } else {
+        showToast('Invalid database JSON backup file.', 'danger');
+      }
+    } catch (err) {
+      showToast('Error reading database file.', 'danger');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportActiveTableCsv() {
+  closeAllMenus();
+  const tableName = state.activeTable;
+  const tableData = state.tables[tableName];
+  if (!tableData) return;
+
+  const cols = tableData.columns.map(c => c.name);
+  let csv = cols.join(',') + '\n';
+  (tableData.rows || []).forEach(row => {
+    const line = cols.map(c => `"${String(row[c] !== undefined ? row[c] : '').replace(/"/g, '""')}"`);
+    csv += line.join(',') + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `dbo_${tableName}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function printActiveTable() {
+  window.print();
+}
+
+/** =========================================================================
+ * UI INTERACTION & MENU HELPERS
+ * ========================================================================= */
+
+function setupEventListeners() {
+  const themeBtn = document.getElementById('themeToggleBtn');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // Diagram card drag listener
+  window.addEventListener('mousemove', (e) => {
+    if (state.diagram.draggingTable) {
+      const dx = (e.clientX - state.diagram.dragStart.x) / state.diagram.zoom;
+      const dy = (e.clientY - state.diagram.dragStart.y) / state.diagram.zoom;
+      const tName = state.diagram.draggingTable;
+      const card = document.getElementById(`diagram-card-${tName}`);
+      if (card && state.diagram.tablePositions[tName]) {
+        state.diagram.tablePositions[tName].x += dx;
+        state.diagram.tablePositions[tName].y += dy;
+        card.style.left = `${state.diagram.tablePositions[tName].x}px`;
+        card.style.top = `${state.diagram.tablePositions[tName].y}px`;
+        state.diagram.dragStart.x = e.clientX;
+        state.diagram.dragStart.y = e.clientY;
+        redrawDiagramConnectors();
+      }
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (state.diagram.draggingTable) {
+      state.diagram.draggingTable = null;
+      saveDatabaseToStorage();
+    }
+  });
+
+  // Global click closes dropdowns and context menus
+  window.addEventListener('click', (e) => {
+    hideSSMSContextMenu();
+    if (!e.target.closest('.menu-item')) {
+      closeAllMenus();
     }
   });
 }
 
-function clearConsoleQuery() {
-  document.getElementById('consoleQueryInput').value = '';
-  document.getElementById('consoleQueryResults').innerHTML = '<p class="placeholder-text">Run a query to see results.</p>';
+function setupKeyboardShortcuts() {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F5' || (e.ctrlKey && e.key === 'Enter')) {
+      e.preventDefault();
+      runConsoleSqlQuery();
+    }
+    if (e.ctrlKey && (e.key === 'n' || e.key === 'N')) {
+      e.preventDefault();
+      openNewQueryTab();
+    }
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      if (state.activeView === 'table-designer') {
+        handleSaveTableDesigner();
+      } else {
+        handleSaveDbButtonClick();
+      }
+    }
+    if (e.key === 'Escape') {
+      closeAllMenus();
+      hideSSMSContextMenu();
+      document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+    }
+  });
 }
 
-/** TOAST NOTIFICATION SYSTEM */
+function toggleTheme() {
+  const body = document.body;
+  const icon = document.querySelector('#themeToggleBtn i');
+  if (body.classList.contains('dark-theme')) {
+    body.classList.remove('dark-theme');
+    body.classList.add('light-theme');
+    if (icon) icon.className = 'fa-solid fa-sun';
+    showToast('Switched to Classic SSMS Light Theme', 'info');
+  } else {
+    body.classList.remove('light-theme');
+    body.classList.add('dark-theme');
+    if (icon) icon.className = 'fa-solid fa-moon';
+    showToast('Switched to Visual Studio Dark Theme', 'info');
+  }
+}
+
+function toggleMenuDropdown(e, menuId) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  const menu = document.getElementById(menuId);
+  const isAlreadyOpen = menu ? menu.classList.contains('show') : false;
+  closeAllMenus();
+  if (menu && !isAlreadyOpen) menu.classList.add('show');
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.ssms-dropdown').forEach(d => d.classList.remove('show'));
+}
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.add('hidden');
+}
+
+function openShortcutsModal() {
+  closeAllMenus();
+  openModal('shortcutsModal');
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
@@ -1551,7 +2715,7 @@ function showToast(message, type = 'info') {
 
   setTimeout(() => {
     toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+    toast.style.transform = 'translateX(20px)';
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
 }

@@ -3,134 +3,386 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Studio SQL - Basic Database & File Studio</title>
-  <meta name="description" content="Minimalist, intuitive database and file management studio inspired by SSMS.">
-  <!-- Google Fonts & Font Awesome Icons -->
+  <title>IWM_SQLite - Database Studio</title>
+  <meta name="description" content="IWM_SQLite - Microsoft SQL Server Management Studio (SSMS) interface for SQLite.">
+  <!-- Google Fonts & FontAwesome -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-theme">
 
-  <!-- MAIN APP CONTAINER -->
-  <div id="app" class="app-container">
+  <!-- MAIN APPLICATION SHELL -->
+  <div id="app" class="ssms-app-shell">
 
-    <!-- TOP NAVBAR HEADER -->
-    <header class="top-navbar">
-      <div class="header-brand">
-        <div class="logo-icon"><i class="fa-solid fa-database"></i></div>
-        <span class="brand-title">Studio SQL</span>
-        <span class="brand-badge">Minimal</span>
+    <!-- SSMS TITLE BAR -->
+    <header class="ssms-titlebar">
+      <div class="titlebar-left">
+        <i class="fa-solid fa-database ssms-app-icon" title="IWM_SQLite"></i>
+        <span class="ssms-app-title">IWM_SQLite — Database Studio</span>
+        <span class="ssms-connection-tag" id="titlebarConnectionTag">GABRIEL-PC\SQLEXPRESS (Connected)</span>
       </div>
-
-      <div class="header-db-status">
-        <span class="status-indicator"></span>
-        <span class="db-label">Database:</span>
-        <strong id="headerDbName">MyDatabase.sqlite</strong>
-        <button class="btn-icon-xs" title="Rename Database" onclick="openRenameDbModal()"><i class="fa-solid fa-pen"></i></button>
-        <span class="db-pill" id="headerTableCount">3 Tables</span>
-      </div>
-
-      <div class="header-actions">
-        <button class="btn btn-sm btn-primary" onclick="openInitialSetupModal()">
-          <i class="fa-solid fa-plus"></i> New DB
-        </button>
-        <button class="btn btn-sm btn-success" onclick="handleSaveDbButtonClick()">
-          <i class="fa-solid fa-floppy-disk"></i> Save DB
-        </button>
-        <button class="btn btn-sm btn-secondary" onclick="exportDatabaseFile()">
-          <i class="fa-solid fa-download"></i> Export DB
-        </button>
-        <button class="btn-icon" id="themeToggleBtn" title="Toggle Light/Dark Mode">
+      <div class="titlebar-right">
+        <button class="titlebar-btn" id="themeToggleBtn" title="Toggle Dark / Light Studio Theme">
           <i class="fa-solid fa-moon"></i>
+        </button>
+        <button class="titlebar-btn" onclick="openShortcutsModal()" title="Keyboard Shortcuts (F1)">
+          <i class="fa-solid fa-keyboard"></i>
+        </button>
+        <button class="titlebar-btn" onclick="openConnectServerModal()" title="Connect to Server...">
+          <i class="fa-solid fa-network-wired"></i>
         </button>
       </div>
     </header>
 
-    <!-- MAIN WRAPPER: 2-PANEL LAYOUT (NO RIGHTSIDE CHART/METRICS PANEL) -->
-    <div class="main-body">
+    <!-- SSMS MAIN MENU BAR -->
+    <nav class="ssms-menubar">
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'fileMenu')">
+        File
+        <div class="ssms-dropdown" id="fileMenu">
+          <button class="ssms-dropdown-item" onclick="openConnectServerModal()">
+            <i class="fa-solid fa-plug"></i> Connect Object Explorer...
+          </button>
+          <button class="ssms-dropdown-item" onclick="disconnectServer()">
+            <i class="fa-solid fa-plug-circle-xmark"></i> Disconnect
+          </button>
+          <div class="ssms-dropdown-sep"></div>
+          <button class="ssms-dropdown-item" onclick="openNewQueryTab()">
+            <i class="fa-solid fa-file-code"></i> New Query <span class="shortcut">Ctrl+N</span>
+          </button>
+          <button class="ssms-dropdown-item" onclick="openTableDesignerTab()">
+            <i class="fa-solid fa-table-columns"></i> New Table Designer...
+          </button>
+          <button class="ssms-dropdown-item" onclick="handleSaveDbButtonClick()">
+            <i class="fa-solid fa-floppy-disk"></i> Save Database (.xlsx) <span class="shortcut">Ctrl+S</span>
+          </button>
+          <div class="ssms-dropdown-sep"></div>
+          <button class="ssms-dropdown-item" onclick="exportDatabaseFile()">
+            <i class="fa-solid fa-download"></i> Backup Database (JSON)
+          </button>
+          <button class="ssms-dropdown-item" onclick="openImportDbModal()">
+            <i class="fa-solid fa-upload"></i> Restore Database (JSON)...
+          </button>
+        </div>
+      </div>
 
-      <!-- LEFT EXPLORER SIDEBAR -->
-      <aside class="sidebar-panel">
-        
-        <!-- SECTION 1: TABLES EXPLORER -->
-        <div class="sidebar-section">
-          <div class="section-header">
-            <span class="section-title"><i class="fa-solid fa-table-cells"></i> TABLES</span>
-            <button class="btn-icon-xs" title="Create New Table" onclick="openCreateTableModal()">
-              <i class="fa-solid fa-plus"></i>
-            </button>
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'editMenu')">
+        Edit
+        <div class="ssms-dropdown" id="editMenu">
+          <button class="ssms-dropdown-item" onclick="runConsoleSqlQuery()"><i class="fa-solid fa-play text-success"></i> Execute <span class="shortcut">F5</span></button>
+          <button class="ssms-dropdown-item" onclick="clearConsoleQuery()"><i class="fa-solid fa-eraser"></i> Clear Query</button>
+          <div class="ssms-dropdown-sep"></div>
+          <button class="ssms-dropdown-item" onclick="openAddRecordModal()"><i class="fa-solid fa-plus"></i> Insert New Row...</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'viewMenu')">
+        View
+        <div class="ssms-dropdown" id="viewMenu">
+          <button class="ssms-dropdown-item" onclick="toggleObjectExplorer()"><i class="fa-solid fa-folder-tree"></i> Object Explorer <span class="shortcut">F8</span></button>
+          <button class="ssms-dropdown-item" onclick="openErDiagramTab()"><i class="fa-solid fa-diagram-project"></i> Database Diagrams</button>
+          <button class="ssms-dropdown-item" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i> Toggle Studio Theme</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'queryMenu')">
+        Query
+        <div class="ssms-dropdown" id="queryMenu">
+          <button class="ssms-dropdown-item" onclick="runConsoleSqlQuery()"><i class="fa-solid fa-play text-success"></i> Execute <span class="shortcut">F5</span></button>
+          <button class="ssms-dropdown-item" onclick="cancelExecutingQuery()"><i class="fa-solid fa-stop text-danger"></i> Cancel Executing Query</button>
+          <div class="ssms-dropdown-sep"></div>
+          <button class="ssms-dropdown-item" onclick="toggleQueryHistoryPanel()"><i class="fa-solid fa-clock-rotate-left"></i> Execution History</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'dbMenu')">
+        Database
+        <div class="ssms-dropdown" id="dbMenu">
+          <button class="ssms-dropdown-item" onclick="openInitialSetupModal()"><i class="fa-solid fa-database"></i> New Database...</button>
+          <button class="ssms-dropdown-item" onclick="openRenameDbModal()"><i class="fa-solid fa-pen"></i> Rename Current Database...</button>
+          <button class="ssms-dropdown-item" onclick="openDbPropertiesModal()"><i class="fa-solid fa-circle-info"></i> Database Properties...</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'toolsMenu')">
+        Tools
+        <div class="ssms-dropdown" id="toolsMenu">
+          <button class="ssms-dropdown-item" onclick="openShortcutsModal()"><i class="fa-solid fa-keyboard"></i> Options & Shortcuts</button>
+          <button class="ssms-dropdown-item" onclick="exportActiveTableCsv()"><i class="fa-solid fa-file-csv"></i> Export Table to CSV</button>
+          <button class="ssms-dropdown-item" onclick="printActiveTable()"><i class="fa-solid fa-print"></i> Print Active Table</button>
+        </div>
+      </div>
+
+      <div class="menu-item" onclick="toggleMenuDropdown(event, 'helpMenu')">
+        Help
+        <div class="ssms-dropdown" id="helpMenu">
+          <button class="ssms-dropdown-item" onclick="openShortcutsModal()"><i class="fa-solid fa-circle-question"></i> Keyboard Shortcuts</button>
+          <button class="ssms-dropdown-item" onclick="showToast('IWM_SQLite Engine (SQLite & Relational) v16.2', 'info')"><i class="fa-solid fa-info"></i> About IWM_SQLite</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- SSMS STANDARD TOOLBAR -->
+    <div class="ssms-toolbar">
+      <!-- Connect / Disconnect -->
+      <button class="tb-btn" onclick="openConnectServerModal()" title="Connect Object Explorer (Connect to Server / Laptop)">
+        <i class="fa-solid fa-plug text-accent"></i>
+        <span>Connect</span>
+      </button>
+      <button class="tb-btn" onclick="disconnectServer()" title="Disconnect from Server">
+        <i class="fa-solid fa-plug-circle-xmark text-danger"></i>
+      </button>
+
+      <div class="tb-sep"></div>
+
+      <!-- New Query -->
+      <button class="tb-btn tb-btn-primary" onclick="openNewQueryTab()" title="New SQL Query (Ctrl+N)">
+        <i class="fa-solid fa-file-code"></i>
+        <span>New Query</span>
+      </button>
+
+      <!-- Database Selector Dropdown -->
+      <div class="tb-db-selector" title="Available Databases">
+        <i class="fa-solid fa-database"></i>
+        <select id="toolbarDbSelect" onchange="handleToolbarDbChange(this.value)">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+
+      <div class="tb-sep"></div>
+
+      <!-- Execute (F5) Button -->
+      <button class="tb-btn tb-btn-execute" id="btnExecuteQuery" onclick="runConsoleSqlQuery()" title="Execute SQL Query (F5 or Ctrl+Enter)">
+        <i class="fa-solid fa-play"></i>
+        <span>Execute</span>
+      </button>
+
+      <!-- Cancel Query Execution -->
+      <button class="tb-btn" onclick="cancelExecutingQuery()" title="Cancel Executing Query">
+        <i class="fa-solid fa-stop text-danger"></i>
+      </button>
+
+      <div class="tb-sep"></div>
+
+      <!-- Table Designer Action -->
+      <button class="tb-btn" onclick="openTableDesignerTab()" title="New Table Designer (SSMS Design)">
+        <i class="fa-solid fa-table-columns"></i>
+        <span>New Table</span>
+      </button>
+
+      <!-- Save Database -->
+      <button class="tb-btn" onclick="handleSaveDbButtonClick()" title="Save Database State & Export Excel (Ctrl+S)">
+        <i class="fa-solid fa-floppy-disk text-success"></i>
+        <span>Save DB</span>
+      </button>
+
+      <!-- Diagram View -->
+      <button class="tb-btn" onclick="openErDiagramTab()" title="Relational Database Diagrams">
+        <i class="fa-solid fa-diagram-project"></i>
+        <span>Diagram</span>
+      </button>
+    </div>
+
+    <!-- MAIN STUDIO WORKSPACE (OBJECT EXPLORER + DOCKED TABBED DOCUMENTS) -->
+    <div class="ssms-workspace">
+
+      <!-- LEFT PANEL: OBJECT EXPLORER (SSMS DOCKED TREEVIEW) -->
+      <aside class="ssms-object-explorer" id="ssmsObjectExplorer">
+        <div class="oe-header">
+          <div class="oe-title">
+            <i class="fa-solid fa-folder-tree"></i>
+            <span>Object Explorer</span>
           </div>
-          <div class="tree-list" id="tablesList">
-            <!-- Dynamic Tables List -->
+          <div class="oe-actions">
+            <button class="oe-btn" onclick="openConnectServerModal()" title="Connect..."><i class="fa-solid fa-plug"></i></button>
+            <button class="oe-btn" onclick="disconnectServer()" title="Disconnect"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+            <button class="oe-btn" onclick="refreshObjectExplorer()" title="Refresh (F5)"><i class="fa-solid fa-rotate-right"></i></button>
           </div>
         </div>
 
-        <!-- SECTION 2: FOLDERS & FILES EXPLORER (WITH DRAG & DROP HOVER ANIMATION) -->
-        <div class="sidebar-section">
-          <div class="section-header">
-            <span class="section-title"><i class="fa-solid fa-folder-tree"></i> FOLDERS & FILES</span>
-            <button class="btn-icon-xs" title="Create New Folder" onclick="openCreateFolderModal()">
-              <i class="fa-solid fa-folder-plus"></i>
-            </button>
-          </div>
-          <div class="dropzone-tip">
-            <i class="fa-solid fa-hand-pointer"></i> Drag any file (MP4, PNG, CSV...) into any folder below
-          </div>
-
-          <div class="folders-tree" id="foldersTree">
-            <!-- Dynamic Folder Drop Targets Rendered Here -->
-          </div>
+        <!-- SEARCH / FILTER IN OBJECT EXPLORER -->
+        <div class="oe-filter-bar">
+          <i class="fa-solid fa-filter"></i>
+          <input type="text" id="oeFilterInput" placeholder="Filter tables or columns..." onkeyup="filterObjectExplorerTree(this.value)">
         </div>
 
+        <!-- OBJECT EXPLORER TREE VIEW -->
+        <div class="oe-tree-container" id="objectExplorerTree">
+          <!-- Tree Nodes Rendered by app.js -->
+        </div>
       </aside>
 
-      <!-- MAIN CONTENT VIEW AREA -->
-      <main class="content-panel">
+      <!-- SPLITTER BAR (FOR DOCKING RESIZE) -->
+      <div class="ssms-splitter" id="oeSplitter"></div>
 
-        <!-- TABS BAR -->
-        <div class="tabs-header">
-          <div class="tab-items-wrapper" id="tabItemsWrapper">
-            <!-- Dynamic Tabs -->
-          </div>
-          <div class="tab-actions">
-            <button class="btn-tab-action" onclick="openQueryTab()" title="Open SQL Console">
-              <i class="fa-solid fa-terminal"></i> SQL Query
-            </button>
+      <!-- CENTER CONTENT AREA: TABBED MDI DOCUMENTS -->
+      <main class="ssms-document-area">
+
+        <!-- TAB BAR (SSMS STYLE) -->
+        <div class="ssms-tabs-bar">
+          <div class="ssms-tab-items-wrapper" id="tabItemsWrapper">
+            <!-- Dynamic SSMS Tabs (SQLQuery1.sql, dbo.Users [Edit], dbo.Users [Design], etc.) -->
           </div>
         </div>
 
-        <!-- VIEW CONTAINER -->
-        <div class="view-viewport">
+        <!-- ACTIVE VIEW CONTAINER -->
+        <div class="ssms-viewport">
 
-          <!-- VIEW A: TABLE CONTENTS VIEWER & DATA EDITOR -->
-          <section id="view-table-contents" class="view-page active-view">
-            <div class="view-toolbar">
-              <div class="table-info-meta">
-                <h2 id="activeTableName"><i class="fa-solid fa-table"></i> Users</h2>
-                <span class="meta-badge" id="activeTableRowCount">0 rows</span>
-                <span class="meta-badge" id="activeTableColCount">0 cols</span>
-              </div>
-              <div class="toolbar-controls">
-                <div class="search-box">
-                  <i class="fa-solid fa-magnifying-glass"></i>
-                  <input type="text" id="tableDataSearchInput" placeholder="Filter rows..." onkeyup="filterTableDataRows(this.value)">
+          <!-- ============================================================= -->
+          <!-- VIEW 0: SSMS EMPTY / DISCONNECTED CLEAR WORKSPACE             -->
+          <!-- ============================================================= -->
+          <section id="view-empty-workspace" class="ssms-view-page active-view">
+            <div class="ssms-empty-workspace">
+              <div class="empty-workspace-card">
+                <div class="empty-icon-wrapper">
+                  <i class="fa-solid fa-database empty-icon"></i>
                 </div>
-                <button class="btn btn-sm btn-primary" onclick="openAddRecordModal()">
-                  <i class="fa-solid fa-plus"></i> Add Record
+                <h2>IWM_SQLite Database Studio</h2>
+                <p class="empty-subtitle">Microsoft SQL Server Management Studio & SQLite Engine</p>
+                
+                <div class="empty-actions">
+                  <button class="btn btn-primary btn-lg" onclick="openConnectServerModal()">
+                    <i class="fa-solid fa-plug"></i> Connect to Server / Laptop...
+                  </button>
+                  <button class="btn btn-secondary btn-lg" onclick="openNewQueryTab()">
+                    <i class="fa-solid fa-file-code"></i> Open Blank Query
+                  </button>
+                </div>
+
+                <div class="connection-quick-guide">
+                  <div class="guide-item" onclick="openConnectServerModalWithAuth('windows')">
+                    <div class="guide-icon"><i class="fa-brands fa-windows text-accent"></i></div>
+                    <div class="guide-text">
+                      <strong>Windows Authentication (Local Laptop / PC)</strong>
+                      <span>Connects directly using your active Windows account without requiring a password. Recommended for local use.</span>
+                    </div>
+                    <span class="badge-recommended">Recommended</span>
+                  </div>
+
+                  <div class="guide-item" onclick="openConnectServerModalWithAuth('sql')">
+                    <div class="guide-icon"><i class="fa-solid fa-server text-info"></i></div>
+                    <div class="guide-text">
+                      <strong>SQL Server Authentication (Server / Remote)</strong>
+                      <span>Connect to a remote server, local SQL instance, or another laptop using server credentials.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="empty-footer-hint">
+                  <i class="fa-solid fa-circle-info"></i>
+                  <span>Click <strong>Connect to Server</strong> above or in the toolbar to establish connection.</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 1: SSMS SQL QUERY CONSOLE (SQLQuery.sql)                  -->
+          <!-- ============================================================= -->
+          <section id="view-sql-query" class="ssms-view-page">
+            <div class="query-editor-toolbar">
+              <div class="flex-center gap-2">
+                <button class="btn btn-sm btn-execute" onclick="runConsoleSqlQuery()" title="Execute (F5)">
+                  <i class="fa-solid fa-play"></i> Execute (F5)
                 </button>
-                <button class="btn btn-sm btn-secondary" onclick="openEditSchemaModal()">
-                  <i class="fa-solid fa-pen-to-square"></i> Modify Schema
+                <button class="btn btn-sm btn-secondary" onclick="clearConsoleQuery()" title="Clear">
+                  <i class="fa-solid fa-eraser"></i> Clear
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteActiveTable()">
+                <button class="btn btn-sm btn-secondary" onclick="toggleQueryHistoryPanel()" title="History">
+                  <i class="fa-solid fa-clock-rotate-left"></i> History
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="exportQueryResultsCsv()" title="Export Results">
+                  <i class="fa-solid fa-file-csv"></i> Export CSV
+                </button>
+              </div>
+              <div class="query-exec-meta">
+                <span id="queryExecTimer">Ready</span>
+              </div>
+            </div>
+
+            <div class="query-console-split">
+              <!-- Code Editor Pane -->
+              <div class="query-editor-container">
+                <div class="query-line-numbers" id="queryLineNumbers">1</div>
+                <textarea id="consoleQueryInput" class="query-code-area" spellcheck="false" placeholder="-- SQL Query Console
+-- Type your SQLite / SSMS query here, e.g.:
+SELECT * FROM Users;"></textarea>
+              </div>
+
+              <!-- History Sidebar (Collapsible) -->
+              <div class="query-history-sidebar hidden" id="queryHistorySidebar">
+                <div class="query-history-header">
+                  <span><i class="fa-solid fa-clock-rotate-left"></i> Query History</span>
+                  <button class="btn-icon-xs text-danger" title="Clear History" onclick="clearQueryHistory()"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+                <div class="query-history-list" id="queryHistoryList"></div>
+              </div>
+
+              <!-- Query Results Split Pane (Results & Messages Tabs) -->
+              <div class="query-output-panel">
+                <div class="output-tab-bar">
+                  <button class="output-tab active" id="tabOutputResults" onclick="switchOutputTab('results')">
+                    <i class="fa-solid fa-table-cells"></i> Results
+                  </button>
+                  <button class="output-tab" id="tabOutputMessages" onclick="switchOutputTab('messages')">
+                    <i class="fa-solid fa-terminal"></i> Messages
+                  </button>
+                </div>
+
+                <div class="output-content-viewport">
+                  <!-- Results Grid Tab -->
+                  <div class="output-pane active" id="outputPaneResults">
+                    <div class="output-table-scroll" id="consoleQueryResults">
+                      <p class="placeholder-text">Execute a query (F5) to view results.</p>
+                    </div>
+                  </div>
+
+                  <!-- Messages Tab -->
+                  <div class="output-pane" id="outputPaneMessages">
+                    <pre class="messages-output-box" id="consoleQueryMessages">(0 row(s) affected)&#10;Ready.</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 2: SSMS TABLE DATA EDITOR ("Edit Top 200 Rows")          -->
+          <!-- ============================================================= -->
+          <section id="view-table-contents" class="ssms-view-page">
+            <div class="data-editor-toolbar">
+              <div class="table-title-meta">
+                <h2 id="activeTableName"><i class="fa-solid fa-table text-accent"></i> dbo.Users</h2>
+                <div class="meta-pills">
+                  <span class="meta-badge" id="activeTableRowCount">0 rows</span>
+                  <span class="meta-badge" id="activeTableColCount">0 cols</span>
+                </div>
+              </div>
+
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="tableDataSearchInput" placeholder="Filter rows in grid..." onkeyup="filterTableDataRows(this.value)">
+              </div>
+
+              <div class="flex-center gap-1">
+                <button class="btn btn-sm btn-primary" onclick="openAddRecordModal()" title="Insert new row">
+                  <i class="fa-solid fa-plus"></i> Add Row
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="openTableDesignerForActiveTable()" title="Open Table Designer">
+                  <i class="fa-solid fa-pen-to-square"></i> Design Table
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="renderTableContents()" title="Refresh table data">
+                  <i class="fa-solid fa-rotate-right"></i> Refresh
+                </button>
+                <button class="btn btn-sm btn-danger-subtle" onclick="deleteActiveTable()" title="Delete Table from Database">
                   <i class="fa-solid fa-trash-can"></i> Delete Table
                 </button>
               </div>
             </div>
 
-            <!-- TABLE DATA GRID CONTAINER -->
+            <!-- TABLE DATA GRID -->
             <div class="data-grid-container">
               <table class="grid-table" id="mainDataTable">
                 <thead>
@@ -139,167 +391,456 @@
                   </tr>
                 </thead>
                 <tbody id="mainDataTableBody">
-                  <!-- Dynamic Rows -->
+                  <!-- Dynamic Rows with Inline Edit -->
                 </tbody>
               </table>
             </div>
-            <div class="table-footer-status">
-              <span id="gridFooterSummary">Showing table data</span>
-              <button class="btn-link" onclick="handleSaveDbButtonClick()"><i class="fa-solid fa-floppy-disk"></i> Save Database Changes</button>
-            </div>
-          </section>
 
-          <!-- VIEW B: FILE & MEDIA PREVIEWER -->
-          <section id="view-file-preview" class="view-page">
-            <div class="preview-header">
-              <div class="file-title-info">
-                <i class="fa-solid fa-file" id="previewFileIcon"></i>
-                <h3 id="previewFileName">File Preview</h3>
-                <span class="file-size-badge" id="previewFileSize">0 KB</span>
+            <!-- GRID FOOTER / STATUS -->
+            <div class="table-pagination-bar">
+              <div class="flex-center gap-2">
+                <span id="gridFooterSummary">Showing table data</span>
+                <span class="dot-separator">•</span>
+                <label for="pageSizeSelect">Show rows:</label>
+                <select id="pageSizeSelect" class="page-size-select" onchange="changePageSize(this.value)">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="200" selected>200 (Top 200)</option>
+                  <option value="all">All</option>
+                </select>
               </div>
-              <button class="btn btn-sm btn-danger" onclick="deleteActivePreviewFile()">
-                <i class="fa-solid fa-trash"></i> Delete File
-              </button>
-            </div>
-            <div class="preview-body" id="previewBodyContainer">
-              <!-- Dynamic Preview Content (Video, Image, CSV table, SQL text) -->
+
+              <div class="pagination-controls">
+                <button class="pagination-btn" id="pgFirstBtn" onclick="goToPage('first')"><i class="fa-solid fa-angles-left"></i></button>
+                <button class="pagination-btn" id="pgPrevBtn" onclick="goToPage('prev')"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="pageIndicatorText" class="page-indicator">Page 1 of 1</span>
+                <button class="pagination-btn" id="pgNextBtn" onclick="goToPage('next')"><i class="fa-solid fa-chevron-right"></i></button>
+                <button class="pagination-btn" id="pgLastBtn" onclick="goToPage('last')"><i class="fa-solid fa-angles-right"></i></button>
+              </div>
             </div>
           </section>
 
-          <!-- VIEW C: SQL QUERY CONSOLE -->
-          <section id="view-sql-query" class="view-page">
-            <div class="query-editor-bar">
-              <button class="btn btn-sm btn-primary" onclick="runConsoleSqlQuery()">
-                <i class="fa-solid fa-play"></i> Run Query
-              </button>
-              <button class="btn btn-sm btn-secondary" onclick="clearConsoleQuery()">
-                <i class="fa-solid fa-eraser"></i> Clear
-              </button>
+          <!-- ============================================================= -->
+          <!-- VIEW 3: SSMS TABLE DESIGNER ("Design" / Schema Modification)  -->
+          <!-- ============================================================= -->
+          <section id="view-table-designer" class="ssms-view-page">
+            <div class="designer-toolbar">
+              <div class="flex-center gap-2">
+                <h3 class="designer-title" id="designerTitle">
+                  <i class="fa-solid fa-table-columns text-accent"></i>
+                  <span>dbo.NewTable [Design]</span>
+                </h3>
+                <span class="designer-badge" id="designerStatusBadge">Unsaved Changes</span>
+              </div>
+
+              <div class="flex-center gap-1">
+                <button class="btn btn-sm btn-primary" onclick="handleSaveTableDesigner()" title="Save Schema Changes (Ctrl+S)">
+                  <i class="fa-solid fa-floppy-disk"></i> Save Table
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="addDesignerColumnRow()" title="Insert Column Row">
+                  <i class="fa-solid fa-plus"></i> Add Column
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="openAddRelationshipModal(state.designer.editingTableName)" title="Manage Foreign Key Relationships">
+                  <i class="fa-solid fa-link"></i> Relationships
+                </button>
+                <button class="btn btn-sm btn-danger-subtle" onclick="deleteActiveTable()" title="Delete Table">
+                  <i class="fa-solid fa-trash-can"></i> Delete Table
+                </button>
+              </div>
             </div>
-            <textarea id="consoleQueryInput" class="query-textarea" spellcheck="false" placeholder="SELECT * FROM Users;"></textarea>
-            <div class="query-results-wrapper">
-              <div class="results-header-title">QUERY RESULTS</div>
-              <div class="results-scroll-box" id="consoleQueryResults">
-                <p class="placeholder-text">Run a query to see results.</p>
+
+            <!-- TABLE NAME SPECIFIER IN DESIGNER -->
+            <div class="designer-meta-bar">
+              <label for="designerTableNameInput"><strong>Table Name:</strong></label>
+              <input type="text" id="designerTableNameInput" class="designer-name-input" placeholder="e.g. Customers">
+              <small class="text-muted ml-2">Schema: dbo</small>
+            </div>
+
+            <!-- SSMS DESIGNER COLUMNS GRID -->
+            <div class="designer-columns-grid-wrapper">
+              <table class="designer-grid-table">
+                <thead>
+                  <tr>
+                    <th style="width: 44px; text-align: center;">PK</th>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th style="width: 100px; text-align: center;">Allow Nulls</th>
+                    <th style="width: 80px; text-align: center;">Unique</th>
+                    <th>Default Value / Binding</th>
+                    <th style="width: 50px; text-align: center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="designerColumnsTbody">
+                  <!-- Column definition rows populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- SSMS COLUMN PROPERTIES BOTTOM PANEL -->
+            <div class="designer-properties-panel">
+              <div class="prop-panel-header">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Column Properties (<span id="propColNameDisplay">id</span>)</span>
+              </div>
+              <div class="prop-panel-body" id="designerPropertiesBody">
+                <div class="prop-row">
+                  <span class="prop-name">(General) Column Name:</span>
+                  <span class="prop-val" id="propNameVal">id</span>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-name">Data Type:</span>
+                  <span class="prop-val" id="propTypeVal">INTEGER</span>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-name">Allow Nulls:</span>
+                  <span class="prop-val" id="propNullVal">No</span>
+                </div>
+                <div class="prop-row">
+                  <span class="prop-name">Identity / Auto Increment:</span>
+                  <span class="prop-val" id="propIdentityVal">Yes (Primary Key)</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================= -->
+          <!-- VIEW 4: SSMS RELATIONAL DATABASE DIAGRAMS                     -->
+          <!-- ============================================================= -->
+          <section id="view-er-diagram" class="ssms-view-page">
+            <div class="diagram-toolbar">
+              <div class="flex-center gap-2">
+                <h3 class="diagram-title">
+                  <i class="fa-solid fa-diagram-project text-accent"></i> Database Diagrams (Relational ERD)
+                </h3>
+                <span class="meta-badge" id="diagramStats">3 Tables, 1 Relationship</span>
+              </div>
+
+              <div class="flex-center gap-1">
+                <button class="btn btn-sm btn-primary" onclick="openAddRelationshipModal()" title="Add Foreign Key Relationship">
+                  <i class="fa-solid fa-link"></i> Add Relationship
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="autoArrangeDiagramTables()" title="Auto Arrange Cards">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Arrange
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="exportDiagramSvg()" title="Export SVG">
+                  <i class="fa-solid fa-file-image"></i> Export SVG
+                </button>
+                <div class="zoom-pill">
+                  <button class="zoom-btn" onclick="zoomDiagram(-0.1)"><i class="fa-solid fa-minus"></i></button>
+                  <button class="zoom-btn" onclick="resetDiagramZoom()">100%</button>
+                  <button class="zoom-btn" onclick="zoomDiagram(0.1)"><i class="fa-solid fa-plus"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="diagram-viewport" id="diagramViewport">
+              <div class="diagram-canvas" id="diagramCanvas">
+                <svg class="diagram-svg-layer" id="diagramSvgLayer"></svg>
+                <div id="diagramTablesContainer"></div>
               </div>
             </div>
           </section>
 
         </div>
-
       </main>
-
     </div>
+
+    <!-- SSMS BOTTOM STATUS BAR -->
+    <footer class="ssms-statusbar" id="ssmsStatusBar">
+      <div class="sb-left">
+        <span class="sb-item" id="sbStatusText"><i class="fa-solid fa-circle-check text-success"></i> Ready</span>
+      </div>
+      <div class="sb-right">
+        <span class="sb-item" id="sbServerItem"><i class="fa-solid fa-server"></i> <strong id="sbServerName">GABRIEL-PC\SQLEXPRESS</strong></span>
+        <span class="sb-item" id="sbAuthItem"><i class="fa-solid fa-user-shield"></i> <span id="sbAuthUser">GABRIEL\Gabriel (Windows Auth)</span></span>
+        <span class="sb-item" id="sbDbItem"><i class="fa-solid fa-database"></i> <span id="sbDbName">MyDatabase.sqlite</span></span>
+        <span class="sb-item" id="sbRowsItem"><i class="fa-solid fa-list-ol"></i> <span id="sbRowCount">0 rows</span></span>
+        <span class="sb-item" id="sbTimerItem"><i class="fa-solid fa-clock"></i> 00:00:00</span>
+      </div>
+    </footer>
 
   </div>
 
-  <!-- ======================================================= -->
-  <!-- MODAL 1: INITIAL SETUP & DATABASE PROMPT (REQUIRED)     -->
-  <!-- ======================================================= -->
-  <div class="modal-backdrop hidden" id="initialSetupModal">
+  <!-- ============================================================= -->
+  <!-- SSMS RIGHT-CLICK CONTEXT MENU                                 -->
+  <!-- ============================================================= -->
+  <div class="ssms-context-menu" id="ssmsContextMenu">
+    <div class="ctx-item" onclick="handleCtxSelectTop1000()">
+      <i class="fa-solid fa-table"></i> Select Top 1000 Rows
+    </div>
+    <div class="ctx-item" onclick="handleCtxEditTop200()">
+      <i class="fa-solid fa-pen-to-square"></i> Edit Top 200 Rows
+    </div>
+    <div class="ctx-item" onclick="handleCtxDesignTable()">
+      <i class="fa-solid fa-table-columns"></i> Design
+    </div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="handleCtxScriptCreate()">
+      <i class="fa-solid fa-file-code"></i> Script Table as &rarr; CREATE To
+    </div>
+    <div class="ctx-item" onclick="handleCtxRenameTable()">
+      <i class="fa-solid fa-font"></i> Rename Table
+    </div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item text-danger" onclick="handleCtxDeleteTable()">
+      <i class="fa-solid fa-trash-can"></i> Delete Table
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: CONNECT TO SERVER (AUTHENTIC MICROSOFT SSMS DIALOG)   -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="connectServerModal">
+    <div class="modal-card modal-ssms-connect">
+      <div class="modal-header ssms-connect-header">
+        <div class="modal-title-group">
+          <i class="fa-solid fa-server ssms-header-icon"></i>
+          <div>
+            <h3>Connect to Server</h3>
+            <p>IWM_SQLite Database Studio Engine</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('connectServerModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="connectServerForm" onsubmit="handleConnectServerSubmit(event)">
+        <div class="modal-body ssms-connect-body">
+          
+          <!-- Authentication Mode Segmented Choice Cards -->
+          <div class="auth-selection-cards">
+            <div class="auth-card active" id="authCardWindows" onclick="selectAuthMode('windows')">
+              <div class="auth-card-radio"><i class="fa-solid fa-circle-dot"></i></div>
+              <div class="auth-card-content">
+                <div class="auth-card-title">
+                  <i class="fa-brands fa-windows text-accent"></i>
+                  <span>Windows Authentication</span>
+                  <span class="badge-mini-rec">Recommended</span>
+                </div>
+                <div class="auth-card-desc">For local laptops & PCs. Uses active Windows login.</div>
+              </div>
+            </div>
+
+            <div class="auth-card" id="authCardSql" onclick="selectAuthMode('sql')">
+              <div class="auth-card-radio"><i class="fa-regular fa-circle"></i></div>
+              <div class="auth-card-content">
+                <div class="auth-card-title">
+                  <i class="fa-solid fa-server text-info"></i>
+                  <span>Server Authentication</span>
+                </div>
+                <div class="auth-card-desc">For remote servers, instances, or another laptop.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Informational Helper Box -->
+          <div class="auth-info-alert" id="authInfoAlert">
+            <i class="fa-solid fa-circle-info text-accent"></i>
+            <span id="authInfoText">Windows Authentication connects directly using your workstation credentials (<strong>GABRIEL-PC\Gabriel</strong>). No password required.</span>
+          </div>
+
+          <!-- Server Type -->
+          <div class="ssms-form-row">
+            <label for="connServerType">Server type:</label>
+            <div class="ssms-input-col">
+              <select id="connServerType" class="form-control" disabled>
+                <option selected>Database Engine (IWM_SQLite)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Server Name with quick presets -->
+          <div class="ssms-form-row">
+            <label for="connServerName">Server name:</label>
+            <div class="ssms-input-col">
+              <div class="combobox-wrapper">
+                <input type="text" id="connServerName" class="form-control" value="GABRIEL-PC\SQLEXPRESS" placeholder="e.g. localhost, LAPTOP-NAME, or 127.0.0.1" required oninput="updateConnectionPreview()">
+                <select id="connServerPreset" class="combobox-select" onchange="applyServerPreset(this.value)">
+                  <option value="GABRIEL-PC\SQLEXPRESS">GABRIEL-PC\SQLEXPRESS (Local Laptop)</option>
+                  <option value="(local)">(local)</option>
+                  <option value="localhost">localhost</option>
+                  <option value="127.0.0.1,1433">127.0.0.1,1433 (Local Port)</option>
+                  <option value="192.168.1.100">192.168.1.100 (Remote Network Server)</option>
+                  <option value="LAPTOP-CLIENT\SERVER01">LAPTOP-CLIENT\SERVER01 (Another Laptop)</option>
+                </select>
+              </div>
+              <!-- Quick Preset Chips -->
+              <div class="server-preset-chips">
+                <span class="preset-chip" onclick="applyServerPreset('(local)')">(local)</span>
+                <span class="preset-chip" onclick="applyServerPreset('localhost')">localhost</span>
+                <span class="preset-chip" onclick="applyServerPreset('GABRIEL-PC\\SQLEXPRESS')">My Laptop</span>
+                <span class="preset-chip" onclick="applyServerPreset('127.0.0.1,1433')">127.0.0.1</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden auth type select for form binding -->
+          <input type="hidden" id="connAuthType" value="windows">
+
+          <!-- Windows Auth User Name (Disabled/Greyed like SSMS) -->
+          <div class="ssms-form-row" id="rowWindowsUser">
+            <label for="connWindowsUser">User name:</label>
+            <div class="ssms-input-col">
+              <div class="input-with-icon">
+                <i class="fa-solid fa-lock text-muted"></i>
+                <input type="text" id="connWindowsUser" class="form-control ssms-disabled-input" value="GABRIEL-PC\Gabriel" readonly>
+              </div>
+              <small class="form-help">Integrated Windows security logon</small>
+            </div>
+          </div>
+
+          <!-- SQL Auth Credentials (Shown when Server Auth selected) -->
+          <div class="ssms-form-row hidden" id="rowSqlLogin">
+            <label for="connSqlLogin">Login ID:</label>
+            <div class="ssms-input-col">
+              <input type="text" id="connSqlLogin" class="form-control" value="sa" placeholder="sa" oninput="updateConnectionPreview()">
+              <small class="form-help">Database server administrator login</small>
+            </div>
+          </div>
+
+          <div class="ssms-form-row hidden" id="rowSqlPassword">
+            <label for="connSqlPassword">Password:</label>
+            <div class="ssms-input-col">
+              <div class="pwd-input-wrap">
+                <input type="password" id="connSqlPassword" class="form-control" placeholder="Enter server password">
+                <button type="button" class="btn-pwd-toggle" onclick="togglePasswordVisibility()"><i class="fa-solid fa-eye" id="pwdToggleIcon"></i></button>
+              </div>
+              <div class="checkbox-option mt-1">
+                <input type="checkbox" id="connRememberPwd" checked>
+                <label for="connRememberPwd">Remember password</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Database & Schema Options -->
+          <div class="ssms-form-row mt-2">
+            <label for="connDatabaseName">Database:</label>
+            <div class="ssms-input-col">
+              <input type="text" id="connDatabaseName" class="form-control" value="MyDatabase.sqlite" placeholder="Database Name (e.g. MyDatabase.sqlite)" oninput="updateConnectionPreview()">
+            </div>
+          </div>
+
+          <div class="ssms-form-row">
+            <label>Initial Schema:</label>
+            <div class="ssms-input-col">
+              <div class="schema-option-group">
+                <label class="radio-option">
+                  <input type="radio" name="connSchemaSeed" id="seedWithSamples" value="samples" checked>
+                  <span>Include starter sample tables (Users, Orders, Products)</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="connSchemaSeed" id="seedBlank" value="blank">
+                  <span>Start with clean, empty database</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Connection Preview Pill -->
+          <div class="connection-live-preview">
+            <i class="fa-solid fa-circle-nodes text-accent"></i>
+            <span id="connLivePreviewText">Target: GABRIEL-PC\SQLEXPRESS &bull; Windows Auth &bull; MyDatabase.sqlite</span>
+          </div>
+
+          <!-- Connection Options Collapsible -->
+          <div class="ssms-collapsible-options">
+            <button type="button" class="btn-text-toggle" onclick="toggleConnectOptions()">
+              <i class="fa-solid fa-chevron-right" id="connOptionsArrow"></i>
+              <span>Options &gt;&gt;</span>
+            </button>
+            <div class="conn-options-panel hidden" id="connOptionsPanel">
+              <div class="ssms-form-row mt-2">
+                <label for="connNetworkProtocol">Network protocol:</label>
+                <div class="ssms-input-col">
+                  <select id="connNetworkProtocol" class="form-control">
+                    <option selected>TCP/IP (Default)</option>
+                    <option>Named Pipes</option>
+                    <option>Shared Memory</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer ssms-connect-footer">
+          <button type="submit" class="btn btn-primary ssms-btn-connect">
+            <i class="fa-solid fa-plug"></i> Connect
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('connectServerModal')">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="openShortcutsModal()">
+            Help
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: DELETE OBJECTS (AUTHENTIC SSMS DELETE CONFIRMATION)     -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="deleteTableModal">
     <div class="modal-card modal-md">
       <div class="modal-header">
         <div class="modal-title-group">
-          <div class="modal-icon-blue"><i class="fa-solid fa-database"></i></div>
+          <div class="modal-icon-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
           <div>
-            <h3>Database Setup Prompt</h3>
-            <p>Enter Database Name and optional necessary files to seed workspace</p>
+            <h3>Delete Objects</h3>
+            <p>Confirm deletion of selected database table(s)</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('deleteTableModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="mb-2">Are you sure you want to permanently drop and delete the following table?</p>
+        
+        <table class="ssms-delete-grid">
+          <thead>
+            <tr>
+              <th>Object Name</th>
+              <th>Object Type</th>
+              <th>Schema</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><i class="fa-solid fa-table text-accent"></i> <strong id="deleteTargetTableName">TableName</strong></td>
+              <td>User Table</td>
+              <td>dbo</td>
+              <td><span class="badge-success">Ready</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div id="deleteDependentFkWarning" class="alert-box-warning hidden mt-2">
+          <i class="fa-solid fa-link text-warning"></i>
+          <div>
+            <strong>Referential Integrity Notice:</strong>
+            <p id="deleteDependentFkText">Dependent foreign key relationships will be cleanly disassociated without leaving orphaned records.</p>
           </div>
         </div>
       </div>
-      <div class="modal-body">
-        <form id="initialSetupForm" onsubmit="handleInitialSetupSubmit(event)">
-          <div class="form-group">
-            <label for="promptDbName">Database Name <span class="required">*</span></label>
-            <input type="text" id="promptDbName" class="form-control" value="MyDatabase" placeholder="e.g. SchoolDB" required>
-            <small class="form-help">Database extension .sqlite will be added automatically.</small>
-          </div>
 
-          <div class="form-group">
-            <label>Initial Necessary Files (Drag & Drop or Choose)</label>
-            <div class="modal-dropzone" id="modalFileDropzone">
-              <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
-              <span>Drop initial files here (MP4, PNG, CSV, SQL...)</span>
-              <input type="file" id="modalFileInput" multiple style="display: none;" onchange="handleModalFileSelect(event)">
-              <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="document.getElementById('modalFileInput').click()">Browse Files</button>
-            </div>
-            <div class="staged-files-list" id="modalStagedFilesList"></div>
-          </div>
-
-          <div class="form-group">
-            <label>Starter Tables Scaffolding</label>
-            <div class="checkbox-option">
-              <input type="checkbox" id="scaffoldSampleTables" checked>
-              <label for="scaffoldSampleTables">Create default sample tables (Users, Products, Orders)</label>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-check"></i> Initialize & Launch Database</button>
-          </div>
-        </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="btnConfirmDeleteTable" onclick="confirmExecuteTableDeletion()">
+          <i class="fa-solid fa-trash-can"></i> OK (Delete Table)
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('deleteTableModal')">
+          Cancel
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- ======================================================= -->
-  <!-- MODAL 2: CREATE NEW TABLE                               -->
-  <!-- ======================================================= -->
-  <div class="modal-backdrop hidden" id="createTableModal">
-    <div class="modal-card modal-lg">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <div class="modal-icon-blue"><i class="fa-solid fa-table"></i></div>
-          <div>
-            <h3>Create New Table</h3>
-            <p>Define table name and columns</p>
-          </div>
-        </div>
-        <button class="btn-close" onclick="closeModal('createTableModal')"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="modal-body">
-        <form id="createTableForm" onsubmit="handleCreateTableSubmit(event)">
-          <input type="hidden" id="editingOldTableName" value="">
-          <div class="form-group">
-            <label for="newTableName">Table Name</label>
-            <input type="text" id="newTableName" class="form-control" placeholder="e.g. Employees" required>
-          </div>
-
-          <div class="form-group">
-            <div class="flex-between mb-2">
-              <label>Columns</label>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="addCreateTableColumnRow()">
-                <i class="fa-solid fa-plus"></i> Add Column
-              </button>
-            </div>
-            <table class="columns-input-table">
-              <thead>
-                <tr>
-                  <th>Column Name</th>
-                  <th>Type</th>
-                  <th>Primary Key</th>
-                  <th>Not Null</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="createTableColumnsTbody">
-                <!-- Rows dynamically added -->
-              </tbody>
-            </table>
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('createTableModal')">Cancel</button>
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create Table</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================= -->
-  <!-- MODAL 3: ADD / EDIT RECORD ROW                          -->
-  <!-- ======================================================= -->
+  <!-- ============================================================= -->
+  <!-- MODAL: ADD / EDIT ROW RECORD                                  -->
+  <!-- ============================================================= -->
   <div class="modal-backdrop hidden" id="recordModal">
     <div class="modal-card modal-md">
       <div class="modal-header">
@@ -315,9 +856,9 @@
       <div class="modal-body">
         <form id="recordForm" onsubmit="handleRecordFormSubmit(event)">
           <div id="recordFieldsContainer">
-            <!-- Dynamic Input Fields per column -->
+            <!-- Dynamic input controls -->
           </div>
-          <div class="modal-footer mt-3">
+          <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeModal('recordModal')">Cancel</button>
             <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Record</button>
           </div>
@@ -326,47 +867,111 @@
     </div>
   </div>
 
-  <!-- ======================================================= -->
-  <!-- MODAL 4: CREATE NEW FOLDER                              -->
-  <!-- ======================================================= -->
-  <div class="modal-backdrop hidden" id="createFolderModal">
-    <div class="modal-card modal-sm">
+  <!-- ============================================================= -->
+  <!-- MODAL: ADD / MODIFY RELATIONSHIP (FOREIGN KEY WIZARD)         -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="addRelationshipModal">
+    <div class="modal-card modal-md">
       <div class="modal-header">
         <div class="modal-title-group">
-          <div class="modal-icon-blue"><i class="fa-solid fa-folder-plus"></i></div>
+          <div class="modal-icon-blue"><i class="fa-solid fa-link"></i></div>
           <div>
-            <h3>Create New Folder</h3>
-            <p>Organize dropped files</p>
+            <h3>Foreign Key Relationship</h3>
+            <p>Connect tables with referential integrity constraints</p>
           </div>
         </div>
-        <button class="btn-close" onclick="closeModal('createFolderModal')"><i class="fa-solid fa-xmark"></i></button>
+        <button class="btn-close" onclick="closeModal('addRelationshipModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
-        <form id="createFolderForm" onsubmit="handleCreateFolderSubmit(event)">
-          <div class="form-group">
-            <label for="newFolderName">Folder Name</label>
-            <input type="text" id="newFolderName" class="form-control" placeholder="e.g. Media, Reports..." required>
+        <form id="addRelationshipForm" onsubmit="handleAddRelationshipSubmit(event)">
+          <div class="properties-grid mb-3">
+            <div class="form-group">
+              <label for="fkSourceTable">Foreign Key Table:</label>
+              <select id="fkSourceTable" class="form-control" onchange="updateFkSourceColumns()"></select>
+            </div>
+            <div class="form-group">
+              <label for="fkSourceCol">Foreign Key Column:</label>
+              <select id="fkSourceCol" class="form-control"></select>
+            </div>
           </div>
+
+          <div class="properties-grid mb-3">
+            <div class="form-group">
+              <label for="fkTargetTable">Primary / Unique Key Table:</label>
+              <select id="fkTargetTable" class="form-control" onchange="updateFkTargetColumns()"></select>
+            </div>
+            <div class="form-group">
+              <label for="fkTargetCol">Referenced Column (PK):</label>
+              <select id="fkTargetCol" class="form-control"></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="fkOnDelete">Cascade Action (ON DELETE):</label>
+            <select id="fkOnDelete" class="form-control">
+              <option value="CASCADE">CASCADE (Delete related rows automatically)</option>
+              <option value="SET NULL">SET NULL (Set foreign key column to NULL)</option>
+              <option value="RESTRICT">RESTRICT (Prevent deletion if foreign keys exist)</option>
+            </select>
+          </div>
+
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('createFolderModal')">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create Folder</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('addRelationshipModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Enforce Relationship</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- ======================================================= -->
-  <!-- MODAL 5: RENAME DATABASE                                -->
-  <!-- ======================================================= -->
+  <!-- ============================================================= -->
+  <!-- MODAL: NEW DATABASE INITIALIZATION                            -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="initialSetupModal">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-database"></i></div>
+          <div>
+            <h3>New Database</h3>
+            <p>Initialize a new database workspace</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('initialSetupModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="initialSetupForm" onsubmit="handleInitialSetupSubmit(event)">
+          <div class="form-group">
+            <label for="promptDbName">Database Name <span class="required">*</span></label>
+            <input type="text" id="promptDbName" class="form-control" value="MyDatabase" placeholder="e.g. SalesDB" required>
+            <small class="form-help">Extension .sqlite is appended automatically.</small>
+          </div>
+          <div class="form-group">
+            <div class="checkbox-option">
+              <input type="checkbox" id="scaffoldSampleTables" checked>
+              <label for="scaffoldSampleTables">Seed with sample tables (Users, Orders, Products)</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('initialSetupModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Create Database</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: RENAME DATABASE                                        -->
+  <!-- ============================================================= -->
   <div class="modal-backdrop hidden" id="renameDbModal">
     <div class="modal-card modal-sm">
       <div class="modal-header">
         <div class="modal-title-group">
-          <div class="modal-icon-blue"><i class="fa-solid fa-pen-to-square"></i></div>
+          <div class="modal-icon-blue"><i class="fa-solid fa-pen"></i></div>
           <div>
             <h3>Rename Database</h3>
-            <p>Enter new database name</p>
+            <p>Modify database container filename</p>
           </div>
         </div>
         <button class="btn-close" onclick="closeModal('renameDbModal')"><i class="fa-solid fa-xmark"></i></button>
@@ -374,26 +979,148 @@
       <div class="modal-body">
         <form id="renameDbForm" onsubmit="handleRenameDbSubmit(event)">
           <div class="form-group">
-            <label for="renameDbInput">Database Name</label>
-            <input type="text" id="renameDbInput" class="form-control" placeholder="MyDatabase" required>
-            <small class="form-help">Extension .sqlite is preserved automatically.</small>
+            <label for="renameDbInput">Database File Name</label>
+            <input type="text" id="renameDbInput" class="form-control" required>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeModal('renameDbModal')">Cancel</button>
-            <button type="submit" class="btn btn-primary">Rename Database</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Rename</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- TOAST CONTAINER -->
+  <!-- ============================================================= -->
+  <!-- MODAL: DATABASE PROPERTIES                                    -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="dbPropertiesModal">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-circle-info"></i></div>
+          <div>
+            <h3>Database Properties</h3>
+            <p>Connection & Storage Statistics</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('dbPropertiesModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="properties-grid">
+          <div class="property-card">
+            <span class="prop-label">Database Name</span>
+            <div class="prop-value" id="propDbNameVal" style="font-size: 14px;">MyDatabase.sqlite</div>
+          </div>
+          <div class="property-card">
+            <span class="prop-label">Server Host</span>
+            <div class="prop-value" id="propServerHostVal" style="font-size: 14px;">GABRIEL-PC\SQLEXPRESS</div>
+          </div>
+          <div class="property-card">
+            <span class="prop-label">Total Tables</span>
+            <div class="prop-value text-accent" id="propTableCountVal">3</div>
+          </div>
+          <div class="property-card">
+            <span class="prop-label">Total Records</span>
+            <div class="prop-value" id="propRowCountVal">9</div>
+          </div>
+          <div class="property-card">
+            <span class="prop-label">Relationships (FKs)</span>
+            <div class="prop-value text-info" id="propFkCountVal">1</div>
+          </div>
+          <div class="property-card">
+            <span class="prop-label">Engine Compatibility</span>
+            <div class="prop-value text-success" style="font-size: 14px;">SQLite 3 / T-SQL</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('dbPropertiesModal')">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: RESTORE DATABASE (IMPORT JSON)                         -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="importDbModal">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-file-import"></i></div>
+          <div>
+            <h3>Restore Database (JSON)</h3>
+            <p>Upload a JSON database backup file</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('importDbModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-dropzone" onclick="document.getElementById('importFileInput').click()">
+          <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+          <h4>Click to browse or drag & drop JSON backup</h4>
+          <p class="form-help">Supports IWM_SQLite and SQLite JSON backups</p>
+          <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFileSelect(event)">
+        </div>
+        <div id="stagedImportFileDisplay" class="mt-2 text-muted" style="font-size: 11px;"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('importDbModal')">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: KEYBOARD SHORTCUTS & HELP                              -->
+  <!-- ============================================================= -->
+  <div class="modal-backdrop hidden" id="shortcutsModal">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-blue"><i class="fa-solid fa-keyboard"></i></div>
+          <div>
+            <h3>IWM_SQLite Keyboard Shortcuts</h3>
+            <p>Productivity shortcuts matching SSMS</p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('shortcutsModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <table class="shortcuts-table">
+          <tbody>
+            <tr>
+              <td><span class="kbd-key">F5</span> or <span class="kbd-key">Ctrl</span> + <span class="kbd-key">Enter</span></td>
+              <td>Execute SQL Query in active editor tab</td>
+            </tr>
+            <tr>
+              <td><span class="kbd-key">Ctrl</span> + <span class="kbd-key">N</span></td>
+              <td>Open new SQL Query Editor tab</td>
+            </tr>
+            <tr>
+              <td><span class="kbd-key">Ctrl</span> + <span class="kbd-key">S</span></td>
+              <td>Save Database & export Excel workbook (.xlsx)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd-key">Right Click</span> on table in Object Explorer</td>
+              <td>Show SSMS Context Menu (Select Top 1000, Edit Top 200, Design, Delete)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd-key">Escape</span></td>
+              <td>Close active modal dialog or context menu</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('shortcutsModal')">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- HIDDEN FILE INPUT FOR EXPLORER UPLOADS -->
-  <input type="file" id="globalFileInput" style="display: none;" multiple onchange="handleGlobalFileSelect(event)">
-
-  <!-- XLSX SPREADSHEET EXPORT ENGINE -->
+  <!-- SCRIPT LIBRARIES -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>

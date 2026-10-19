@@ -40,7 +40,7 @@ def main():
     url = f"http://{HOST}:{port_used}"
     
     print("\n" + "=" * 60)
-    print("  STUDIO SQL - BASIC DATABASE & FILE STUDIO SERVER")
+    print("  IWM_SQLite - DATABASE & SSMS STUDIO SERVER")
     print("=" * 60)
     print(f"  Status   : Server is Live and Running!")
     print(f"  URL      : {url}")
@@ -54,7 +54,7 @@ def main():
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nStopping Studio SQL Server... Goodbye!")
+        print("\nStopping IWM_SQLite Server... Goodbye!")
         httpd.server_close()
         sys.exit(0)
 
